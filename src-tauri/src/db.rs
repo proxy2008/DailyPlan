@@ -42,7 +42,7 @@ fn row_to_task(row: &Row<'_>) -> rusqlite::Result<Task> {
     let description: Option<String> = row.get("description")?;
     let frequency_json: String = row.get("frequency")?;
     let slots_json: String = row.get("slots")?;
-    let priority: i32 = row.get("priority")?;
+    let priority_rank: i32 = row.get("priority")?;
     let active_int: i64 = row.get("active")?;
 
     let frequency: Frequency = serde_json::from_str(&frequency_json)
@@ -56,7 +56,7 @@ fn row_to_task(row: &Row<'_>) -> rusqlite::Result<Task> {
         description,
         frequency,
         slots,
-        priority,
+        priority_level: dailyplan_domain::PriorityLevel::from_rank(priority_rank),
         active: active_int != 0,
     })
 }
@@ -89,7 +89,7 @@ pub fn insert_task(db: &Db, task: &Task) -> rusqlite::Result<Task> {
             task.description,
             frequency_json,
             slots_json,
-            task.priority,
+            task.priority_level.rank(),
             task.active as i64,
         ],
     )?;
@@ -112,7 +112,7 @@ pub fn update_task(db: &Db, task: &Task) -> rusqlite::Result<()> {
             task.description,
             frequency_json,
             slots_json,
-            task.priority,
+            task.priority_level.rank(),
             task.active as i64,
             task.id,
         ],
@@ -137,7 +137,7 @@ pub fn delete_task(db: &Db, id: i64) -> rusqlite::Result<()> {
 mod tests {
     use super::*;
     use chrono::{NaiveDate, NaiveTime};
-    use dailyplan_domain::Frequency;
+    use dailyplan_domain::{Frequency, PriorityLevel};
 
     fn in_mem_db() -> Db {
         let conn = open_and_migrate(&std::env::temp_dir().join("dailyplan_test.db")).unwrap();
@@ -162,7 +162,7 @@ mod tests {
                 weekdays: [true; 7],
             },
             slots: vec![slot("07:00", "07:30")],
-            priority: 5,
+            priority_level: PriorityLevel::High,
             active: true,
         }
     }
@@ -176,7 +176,7 @@ mod tests {
         assert_eq!(all.len(), 1);
         assert_eq!(all[0].name, "晨跑");
         // 反序列化回来字段一致
-        assert_eq!(all[0].priority, 5);
+        assert_eq!(all[0].priority_level, PriorityLevel::High);
         assert!(all[0].active);
         assert_eq!(all[0].slots.len(), 1);
     }
@@ -185,11 +185,11 @@ mod tests {
     fn update_changes_fields() {
         let db = in_mem_db();
         let mut t = insert_task(&db, &sample("读书")).unwrap();
-        t.priority = 9;
+        t.priority_level = PriorityLevel::Urgent;
         t.active = false;
         update_task(&db, &t).unwrap();
         let all = list_tasks(&db).unwrap();
-        assert_eq!(all[0].priority, 9);
+        assert_eq!(all[0].priority_level, PriorityLevel::Urgent);
         assert!(!all[0].active);
     }
 
@@ -209,9 +209,15 @@ mod tests {
             Frequency::Weekly { weekdays: [true, false, true, false, true, false, false] },
             Frequency::Interval { every_days: 4, start: NaiveDate::from_ymd_opt(2026, 7, 1).unwrap() },
             Frequency::Once { date: NaiveDate::from_ymd_opt(2026, 8, 8).unwrap() },
+            Frequency::Custom {
+                dates: vec![
+                    NaiveDate::from_ymd_opt(2026, 7, 5).unwrap(),
+                    NaiveDate::from_ymd_opt(2026, 7, 10).unwrap(),
+                ],
+            },
         ];
         for (i, f) in variants.into_iter().enumerate() {
-            let t = insert_task(&db, &Task { id: 0, name: format!("t{i}"), description: None, frequency: f.clone(), slots: vec![], priority: 0, active: true }).unwrap();
+            let t = insert_task(&db, &Task { id: 0, name: format!("t{i}"), description: None, frequency: f.clone(), slots: vec![], priority_level: PriorityLevel::Low, active: true }).unwrap();
             let all = list_tasks(&db).unwrap();
             let got = all.iter().find(|x| x.id == t.id).unwrap();
             assert_eq!(got.frequency, f, "频率变体 {i} 往返不一致");
