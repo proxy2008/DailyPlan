@@ -3,15 +3,24 @@
 use chrono::{NaiveDate, NaiveTime};
 use serde::{Deserialize, Serialize};
 
+use crate::task::PriorityLevel;
+
 /// 一天里需要打卡的一条具体事项（由调度引擎从 Task 展开而来）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ChecklistItem {
     pub task_id: i64,
     pub task_name: String,
-    pub start: NaiveTime,
-    pub end: NaiveTime,
-    /// 时长（分钟），便于打印。
+    /// None 表示无时段任务。
+    #[serde(default)]
+    pub start: Option<NaiveTime>,
+    #[serde(default)]
+    pub end: Option<NaiveTime>,
     pub duration_min: u32,
+    #[serde(default)]
+    pub priority: PriorityLevel,
+    /// 当日临时"待定"标记。后端始终 false，由前端改。
+    #[serde(default)]
+    pub pending: bool,
 }
 
 /// 两个事项发生时段重叠的告警。MVP 只告警，不自动改时段。
