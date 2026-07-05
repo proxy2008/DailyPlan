@@ -48,12 +48,17 @@ fn freq_label(f: &Frequency) -> String {
 
 /// 任务列表组件（只渲染，事件由 app.rs 全局委托处理）。
 #[component]
-pub fn TaskList(tasks: ReadSignal<Vec<Task>>, confirming: RwSignal<Option<i64>>) -> impl IntoView {
+pub fn TaskList(
+    tasks: ReadSignal<Vec<Task>>,
+    confirming: RwSignal<Option<i64>>,
+    tasks_rev: RwSignal<u32>,
+) -> impl IntoView {
     view! {
         <div class="task-list">
             <h2>"我的任务（" {move || tasks.get().len()} "）"</h2>
             <div class="cards">
-                <For each=move || tasks.get() key=|t| t.id let(t)>
+                <For each=move || { let _ = tasks_rev.get(); tasks.get() }
+                    key={let tr = tasks_rev; move |t| (tr.get(), t.id) } let(t)>
                     {move || {
                         let name = t.name.clone();
                         let id = t.id;

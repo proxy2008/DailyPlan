@@ -25,6 +25,8 @@ pub fn App() -> impl IntoView {
     let editor_state = RwSignal::new(EditorState::default());
     // 任务列表数据
     let (tasks, set_tasks) = signal::<Vec<Task>>(Vec::new());
+    // tasks 修订号：每次 refresh 递增，强制 TaskList 的 <For> 重建（编辑后内容变了但 id 没变）
+    let tasks_rev = RwSignal::new(0u32);
     // 删除确认状态：Some(id) 表示正在确认删除该任务
     let confirming: RwSignal<Option<i64>> = RwSignal::new(None);
     // 当前查看的日期
@@ -33,8 +35,12 @@ pub fn App() -> impl IntoView {
     // 加载任务列表
     let refresh = StoredValue::new(move || {
         spawn_local(async move {
+            web_sys::console::log_1(&"[refresh] 开始 list_tasks".into());
             match crate::tauri::list_tasks().await {
-                Ok(list) => set_tasks.set(list),
+                Ok(list) => {
+                    set_tasks.set(list);
+                    tasks_rev.update(|v| *v = v.wrapping_add(1));
+                }
                 Err(e) => web_sys::console::error_1(&format!("加载任务失败: {e}").into()),
             }
         });
@@ -107,6 +113,7 @@ pub fn App() -> impl IntoView {
     };
 
     let on_saved = move || {
+        web_sys::console::log_1(&"[on_saved] 保存回调触发，关闭 modal + refresh".into());
         panel.set(Panel::List);
         refresh.with_value(|f| f());
     };
@@ -143,7 +150,7 @@ pub fn App() -> impl IntoView {
             <section class="col col-right">
                 <div class="list-panel">
                     <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                    <TaskList tasks confirming />
+                                <TaskList tasks confirming tasks_rev />
                 </div>
             </section>
         </main>
