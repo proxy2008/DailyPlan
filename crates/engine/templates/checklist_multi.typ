@@ -1,6 +1,9 @@
 // DailyPlan 多日打卡表 Typst 模板
-// data.json 是 PrintData 数组，每天渲染一页，最后一天不分页。
+// data.json 是 PrintData 数组，每天渲染一页，最后一天后不分页。
 // 多日模式：不处理待定（pending 全 false）、不重排、note 来自 task.description。
+//
+// 关键：用顶层 markup 模式 + # 前缀（和单日 checklist.typ 一致），
+// 避免 let 函数体内代码模式/markup 模式混用的陷阱。
 
 #let days = json("data.json")
 
@@ -28,8 +31,8 @@
   stroke: 0.5pt + gray,
 )[#content]
 
-// 渲染单天内容（标题 + 冲突 + 表格 + 复盘），不含 set page。
-#let render-day(data) = {
+// 循环渲染每一天
+#for (idx, data) in days.enumerate() {
   // ===== 标题区 =====
   grid(
     columns: (1fr, auto),
@@ -50,7 +53,7 @@
 
   // ===== 冲突告警（如有）=====
   if data.conflicts.len() > 0 [
-    block(
+    #block(
       width: 100%,
       fill: rgb("fff4e5"),
       stroke: (left: 3pt + rgb("e8a33d")),
@@ -65,12 +68,12 @@
         #c \
       ]
     ]
-    v(0.3em)
+    #v(0.3em)
   ]
 
   // ===== 打卡表 =====
   if data.items.len() > 0 [
-    table(
+    #table(
       columns: (2.3cm, 1fr, 1.8cm, 1.3cm, 1fr),
       column-gutter: 0pt,
       align: (center, left, center, center, left),
@@ -96,7 +99,7 @@
       }).flatten(),
     )
   ] else [
-    align(center)[
+    #align(center)[
       #v(1em)
       #text(size: 11pt, fill: gray)[今日暂无计划任务]
       #v(1em)
@@ -104,11 +107,11 @@
   ]
 
   if data.with_review [
-    v(0.8em)
-    let writing-box(title) = block(width: 100%)[
+    #v(0.8em)
+    #let writing-box(title) = block(width: 100%)[
       #text(weight: "bold", size: 10.5pt)[#title]
       #v(0.2em)
-      block(
+      #block(
         width: 100%,
         height: 2.6cm,
         clip: true,
@@ -119,16 +122,13 @@
         #v(0.55cm) #line(length: 100%, stroke: 0.4pt + luma(210))
       ]
     ]
-    writing-box("今日复盘")
-    v(0.5em)
-    writing-box("明日改进")
+    #writing-box("今日复盘")
+    #v(0.5em)
+    #writing-box("明日改进")
   ]
-}
 
-// 循环渲染每一天，最后一天后不 pagebreak
-for (i, day) in days.enumerate() {
-  render-day(day)
-  if i < days.len() - 1 {
+  // 非最后一天分页
+  if idx < days.len() - 1 {
     pagebreak()
   }
 }
