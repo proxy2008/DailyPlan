@@ -307,8 +307,8 @@ pub fn TaskEditor(
                 }}
             </fieldset>
 
-            <label class="untimed-toggle">
-                <input type="checkbox" prop:checked=move || state.get().untimed
+            <div class="untimed-toggle">
+                <input type="checkbox" id="untimed" prop:checked=move || state.get().untimed
                     on:change=move |ev| {
                         let checked = event_target_checked(&ev);
                         state.update(|s| s.untimed = checked);
@@ -316,44 +316,43 @@ pub fn TaskEditor(
                             slots_signal.update(|s| s.push(("07:00".into(), "07:30".into())));
                         }
                     }/>
-                "无固定时间（随时完成）"
-            </label>
+                <label for="untimed">"无固定时间（随时完成）"</label>
+            </div>
 
-            {move || (!state.get().untimed).then(|| {
+            // 时间段：始终渲染，untimed 时置灰禁用（避免勾选时 modal 高度突变）
+            <fieldset class="slots" class:disabled=move || state.get().untimed>
+                <legend>"时间段（硬绑定）"</legend>
                 // 渲染时段输入框——用 slots 的当前快照渲染一次，
                 // 输入只更新 slots_signal，不触发本闭包重跑（避免 DOM 重建导致输入法 panic）。
-                let snapshot = slots_signal.get();
-                let rows: Vec<_> = snapshot.iter().enumerate().map(|(i, (sv, ev))| {
-                    let ss = slots_signal;
-                    view! {
-                        <div class="slot-row" data-slot-index=i>
-                            <input type="time" value=sv.clone()
-                                on:input=move |ev| {
-                                    ss.update(|s| { if i < s.len() { s[i].0 = event_target_value(&ev); } });
-                                } />
-                            <span>"-"</span>
-                            <input type="time" value=ev.clone()
-                                on:input=move |ev| {
-                                    ss.update(|s| { if i < s.len() { s[i].1 = event_target_value(&ev); } });
-                                } />
-                            <button type="button"
-                                on:click=move |_| ss.update(|s| { if s.len() > 1 { s.remove(i); } })>
-                                "✕"
-                            </button>
-                        </div>
-                    }.into_any()
-                }).collect();
-                view! {
-                    <fieldset class="slots">
-                        <legend>"时间段（硬绑定）"</legend>
-                        {rows}
-                        <button type="button" class="add-slot"
-                            on:click=move |_| slots_signal.update(|s| s.push(("08:00".into(), "08:30".into())))>
-                            "+ 添加时段"
-                        </button>
-                    </fieldset>
-                }.into_any()
-            })}
+                {move || {
+                    let snapshot = slots_signal.get();
+                    let rows: Vec<_> = snapshot.iter().enumerate().map(|(i, (sv, ev))| {
+                        let ss = slots_signal;
+                        view! {
+                            <div class="slot-row" data-slot-index=i>
+                                <input type="time" value=sv.clone()
+                                    on:input=move |ev| {
+                                        ss.update(|s| { if i < s.len() { s[i].0 = event_target_value(&ev); } });
+                                    } />
+                                <span>"-"</span>
+                                <input type="time" value=ev.clone()
+                                    on:input=move |ev| {
+                                        ss.update(|s| { if i < s.len() { s[i].1 = event_target_value(&ev); } });
+                                    } />
+                                <button type="button"
+                                    on:click=move |_| ss.update(|s| { if s.len() > 1 { s.remove(i); } })>
+                                    "✕"
+                                </button>
+                            </div>
+                        }.into_any()
+                    }).collect();
+                    rows
+                }}
+                <button type="button" class="add-slot"
+                    on:click=move |_| slots_signal.update(|s| s.push(("08:00".into(), "08:30".into())))>
+                    "+ 添加时段"
+                </button>
+            </fieldset>
 
             <label>"优先级"
                 <select on:change=move |ev| state.update(|s| s.priority_level = event_target_value(&ev))>
