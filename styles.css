@@ -9,8 +9,8 @@
   background-color: #f5f6f7;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  --primary: #2459e6;
-  --primary-hover: #1a47c4;
+  --primary: #5b7a9e;
+  --primary-hover: #4a6885;
   --danger: #d93025;
   --warn-bg: #fff4e5;
   --warn-border: #e8a33d;
@@ -34,7 +34,7 @@ body { margin: 0; }
 
 /* ===== 顶部标题 ===== */
 .app-header {
-  background: linear-gradient(135deg, #2459e6 0%, #4a7bf7 100%);
+  background: linear-gradient(135deg, #5b7a9e 0%, #7d9ab8 100%);
   color: #fff;
   padding: 1.2em 2em;
 }
@@ -322,6 +322,8 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
     --pending-bg: #2a2a2b;
     --input-bg: #38383a;
     --input-text: #e6e6e6;
+    --primary: #8ba8c4;
+    --primary-hover: #7d9ab8;
     --muted-text: #b0b0b0;
     --freq-text: #8ba8c4;
     --btn-hover-bg: #3a3a3c;
