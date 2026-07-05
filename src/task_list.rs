@@ -1,10 +1,11 @@
-//! 任务列表组件：展示所有任务（事件由 app.rs 全局委托处理）。
+//! 任务卡片渲染（共享）：被 TaskManage 页复用。
+//! 事件由 app.rs 全局委托处理，这里只渲染。
 
-use dailyplan_domain::{Frequency, Task};
+use dailyplan_domain::{Frequency, PriorityLevel, Task};
 use leptos::prelude::*;
 
 /// 把频率转成中文简述。
-fn freq_label(f: &Frequency) -> String {
+pub fn freq_label(f: &Frequency) -> String {
     match f {
         Frequency::Daily { times_per_day } => {
             if *times_per_day == 1 {
@@ -46,71 +47,66 @@ fn freq_label(f: &Frequency) -> String {
     }
 }
 
-/// 任务列表组件（只渲染，事件由 app.rs 全局委托处理）。
-#[component]
-pub fn TaskList(
-    tasks: ReadSignal<Vec<Task>>,
-    confirming: RwSignal<Option<i64>>,
-    tasks_rev: RwSignal<u32>,
-) -> impl IntoView {
+/// 频率的大类（用于筛选下拉）。返回字符串 tag，方便匹配。
+pub fn freq_kind(f: &Frequency) -> &'static str {
+    match f {
+        Frequency::Daily { .. } => "daily",
+        Frequency::Weekly { .. } => "weekly",
+        Frequency::Interval { .. } => "interval",
+        Frequency::Once { .. } => "once",
+        Frequency::Custom { .. } => "custom",
+    }
+}
+
+/// 优先级对应的 CSS class。
+pub fn priority_class(p: PriorityLevel) -> &'static str {
+    match p {
+        PriorityLevel::Urgent => "pri-urgent",
+        PriorityLevel::High => "pri-high",
+        PriorityLevel::Normal => "pri-normal",
+        PriorityLevel::Low => "pri-low",
+    }
+}
+
+/// 渲染单张任务卡片。`confirming` 控制内联删除确认 UI。
+pub fn render_card(t: &Task, confirming: RwSignal<Option<i64>>) -> AnyView {
+    let name = t.name.clone();
+    let id = t.id;
+    let freq = freq_label(&t.frequency);
+    let slots = t
+        .slots
+        .iter()
+        .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
+        .collect::<Vec<_>>()
+        .join("   ");
+    let req = t.description.clone().unwrap_or_default();
+    let pl = t.priority_level.label_cn().to_string();
+    let pc = priority_class(t.priority_level).to_string();
+    let show_pri = t.priority_level != PriorityLevel::Normal;
     view! {
-        <div class="task-list">
-            <h2>"我的任务（" {move || tasks.get().len()} "）"</h2>
-            <div class="cards">
-                <For each=move || { let _ = tasks_rev.get(); tasks.get() }
-                    key={let tr = tasks_rev; move |t| (tr.get(), t.id) } let(t)>
-                    {move || {
-                        let name = t.name.clone();
-                        let id = t.id;
-                        let freq = freq_label(&t.frequency);
-                        let slots = t.slots.iter()
-                            .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
-                            .collect::<Vec<_>>().join("   ");
-                        let req = t.description.clone().unwrap_or_default();
-                        let pl = t.priority_level.label_cn().to_string();
-                        let pc = match t.priority_level {
-                            dailyplan_domain::PriorityLevel::Urgent => "pri-urgent",
-                            dailyplan_domain::PriorityLevel::High => "pri-high",
-                            dailyplan_domain::PriorityLevel::Normal => "pri-normal",
-                            dailyplan_domain::PriorityLevel::Low => "pri-low",
-                        }.to_string();
-                        let show_pri = t.priority_level != dailyplan_domain::PriorityLevel::Normal;
-                        view! {
-                            <div class="task-card">
-                                <div class="task-card-main">
-                                    <span class="task-name">{name.clone()}</span>
-                                    <span class="task-freq">{freq}</span>
-                                    <span class="task-slots">{slots}</span>
-                                    {show_pri.then(|| view! { <span class=pc.clone()>{format!("优先级:{}", pl)}</span> })}
-                                    {(!req.is_empty()).then(|| view! { <span class="task-req">{format!("要求:{}", req)}</span> })}
-                                </div>
-                                <div class="task-card-actions">
-                                    <button type="button" class="btn-task-action"
-                                        data-action="edit" data-task-id=id>"编辑"</button>
-                                    // 删除按钮：未确认时显示
-                                    <button type="button" class="btn-task-action danger"
-                                        data-action="delete" data-task-id=id
-                                        class:hidden=move || confirming.get() == Some(id)>"删除"</button>
-                                    // 确认区：点删除后显示
-                                    <span class="confirm-inline"
-                                        class:hidden=move || confirming.get() != Some(id)>
-                                        "删除？"
-                                        <button type="button" class="btn-task-action danger"
-                                            data-action="confirm-delete" data-task-id=id>"是"</button>
-                                        <button type="button" class="btn-task-action"
-                                            data-action="cancel-delete" data-task-id=id>"否"</button>
-                                    </span>
-                                </div>
-                            </div>
-                        }
-                    }}
-                </For>
+        <div class="task-card">
+            <div class="task-card-main">
+                <span class="task-name">{name.clone()}</span>
+                <span class="task-freq">{freq}</span>
+                <span class="task-slots">{slots}</span>
+                {show_pri.then(|| view! { <span class=pc.clone()>{format!("优先级:{}", pl)}</span> })}
+                {(!req.is_empty()).then(|| view! { <span class="task-req">{format!("要求:{}", req)}</span> })}
             </div>
-            {move || if tasks.get().is_empty() {
-                Some(view! { <p class="empty">"还没有任务，点击「新建任务」开始添加。"</p> })
-            } else {
-                None
-            }}
+            <div class="task-card-actions">
+                <button type="button" class="btn-task-action"
+                    data-action="edit" data-task-id=id>"编辑"</button>
+                <button type="button" class="btn-task-action danger"
+                    data-action="delete" data-task-id=id
+                    class:hidden=move || confirming.get() == Some(id)>"删除"</button>
+                <span class="confirm-inline"
+                    class:hidden=move || confirming.get() != Some(id)>
+                    "删除？"
+                    <button type="button" class="btn-task-action danger"
+                        data-action="confirm-delete" data-task-id=id>"是"</button>
+                    <button type="button" class="btn-task-action"
+                        data-action="cancel-delete" data-task-id=id>"否"</button>
+                </span>
+            </div>
         </div>
     }.into_any()
 }

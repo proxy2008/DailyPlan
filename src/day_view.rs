@@ -17,13 +17,39 @@ pub fn DayView(
     date: RwSignal<String>,
     tasks: ReadSignal<Vec<dailyplan_domain::Task>>,
     on_print: impl Fn(String, Vec<crate::tauri::PrintItemInput>) + Send + Sync + 'static,
+    on_print_days: impl Fn() + Send + Sync + 'static,
 ) -> impl IntoView {
     // 当天计划状态：None=加载中，Some(Ok)=成功，Some(Err)=失败。
     let plan = RwSignal::new(None::<Result<DayPlan, String>>);
     let on_print = StoredValue::new(on_print);
+    let on_print_days = StoredValue::new(on_print_days);
 
     // 待定标记：保存被标记为"待定"的 task_id 集合。
     let pending_ids = RwSignal::new(HashSet::<i64>::new());
+    // 打印下拉菜单开关
+    let print_menu_open = RwSignal::new(false);
+
+    // 触发单日打印：收集当前 plan + pending 标记
+    let do_print_day = move || {
+        if let Some(Ok(ref p)) = plan.get() {
+            let d = date.get();
+            let pending_set = pending_ids.get();
+            let items: Vec<crate::tauri::PrintItemInput> = p.items.iter().map(|it| {
+                crate::tauri::PrintItemInput {
+                    time: match (it.start, it.end) {
+                        (Some(s), Some(e)) => Some(format!("{}-{}", s.format("%H:%M"), e.format("%H:%M"))),
+                        _ => None,
+                    },
+                    task_name: it.task_name.clone(),
+                    duration_min: it.duration_min,
+                    pending: pending_set.contains(&it.task_id),
+                    note: it.requirement.clone(),
+                }
+            }).collect();
+            on_print.with_value(|f| f(d, items));
+        }
+        print_menu_open.set(false);
+    };
 
     // date 或 tasks 变化时重新加载（增删改任务后自动刷新当天打卡表）
     Effect::new(move || {
@@ -55,25 +81,28 @@ pub fn DayView(
                     on:input=move |ev| date.set(event_target_value(&ev)) />
                 <button on:click=move |_| go(1)>"后一天 ›"</button>
                 <button on:click=move |_| today()>"今天"</button>
-                <button class="primary" on:click=move |_| {
-                    if let Some(Ok(ref p)) = plan.get() {
-                        let d = date.get();
-                        let pending_set = pending_ids.get();
-                        let items: Vec<crate::tauri::PrintItemInput> = p.items.iter().map(|it| {
-                            crate::tauri::PrintItemInput {
-                                time: match (it.start, it.end) {
-                                    (Some(s), Some(e)) => Some(format!("{}-{}", s.format("%H:%M"), e.format("%H:%M"))),
-                                    _ => None,
-                                },
-                                task_name: it.task_name.clone(),
-                                duration_min: it.duration_min,
-                                pending: pending_set.contains(&it.task_id),
-                                note: it.requirement.clone(),
-                            }
-                        }).collect();
-                        on_print.with_value(|f| f(d, items));
-                    }
-                }>"🖨 打印"</button>
+                // 打印下拉菜单
+                <div class="print-dropdown">
+                    <button class="primary" on:click=move |_| print_menu_open.update(|o| *o = !*o)>"🖨 打印 ▾"</button>
+                    {move || if print_menu_open.get() {
+                        Some(view! {
+                            <div class="print-menu-overlay" on:click=move |_| print_menu_open.set(false)>
+                                <div class="print-menu" on:click=move |ev| ev.stop_propagation()>
+                                    <button type="button" class="print-menu-item" on:click=move |_| do_print_day()>
+                                        "🖨 打印当天"
+                                    </button>
+                                    <button type="button" class="print-menu-item"
+                                        on:click=move |_| {
+                                            print_menu_open.set(false);
+                                            on_print_days.with_value(|f| f());
+                                        }>
+                                        "📅 打印多日…"
+                                    </button>
+                                </div>
+                            </div>
+                        })
+                    } else { None }}
+                </div>
             </div>
 
             {move || match plan.get() {
