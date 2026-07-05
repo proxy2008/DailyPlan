@@ -9,11 +9,14 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 /// 当日打卡表视图。
-/// `date` 控制日期；`on_print(date_str)` 打印回调，传入要打印的日期。
+/// `date` 控制日期；`on_print(date_str, items)` 打印回调，传入日期与构造好的打印 items。
+///
+/// 注：Task 9 会在此加入 `pending_ids` 信号让用户标记待定；
+/// 此 Task 8 暂以 `pending: false` 占位。
 #[component]
 pub fn DayView(
     date: RwSignal<String>,
-    on_print: impl Fn(String) + Send + Sync + 'static,
+    on_print: impl Fn(String, Vec<crate::tauri::PrintItemInput>) + Send + Sync + 'static,
 ) -> impl IntoView {
     // 当天计划状态：None=加载中，Some(Ok)=成功，Some(Err)=失败。
     let plan = RwSignal::new(None::<Result<DayPlan, String>>);
@@ -49,8 +52,22 @@ pub fn DayView(
                 <button on:click=move |_| go(1)>"后一天 ›"</button>
                 <button on:click=move |_| today()>"今天"</button>
                 <button class="primary" on:click=move |_| {
-                    let d = date.get();
-                    on_print.with_value(|f| f(d))
+                    if let Some(Ok(ref p)) = plan.get() {
+                        let d = date.get();
+                        let items: Vec<crate::tauri::PrintItemInput> = p.items.iter().map(|it| {
+                            crate::tauri::PrintItemInput {
+                                time: match (it.start, it.end) {
+                                    (Some(s), Some(e)) => Some(format!("{}-{}", s.format("%H:%M"), e.format("%H:%M"))),
+                                    _ => None,
+                                },
+                                task_name: it.task_name.clone(),
+                                duration_min: it.duration_min,
+                                // Task 9 会用 pending_ids 信号覆盖此值。
+                                pending: false,
+                            }
+                        }).collect();
+                        on_print.with_value(|f| f(d, items));
+                    }
                 }>"🖨 打印"</button>
             </div>
 
@@ -81,7 +98,10 @@ fn render_plan(p: &DayPlan) -> AnyView {
         .iter()
         .map(|it| {
             (
-                format!("{}-{}", it.start.format("%H:%M"), it.end.format("%H:%M")),
+                match (it.start, it.end) {
+                    (Some(s), Some(e)) => format!("{}-{}", s.format("%H:%M"), e.format("%H:%M")),
+                    _ => String::new(),
+                },
                 it.task_name.clone(),
                 if it.duration_min > 0 {
                     format!("{}min", it.duration_min)

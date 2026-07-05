@@ -64,13 +64,27 @@ pub async fn generate_day(date: &str) -> Result<DayPlan, String> {
     serde_wasm_bindgen::from_value::<DayPlan>(raw).map_err(|e| e.to_string())
 }
 
+/// 前端传给 print_day 的单个 item（镜像后端 PrintItemInput）。
+/// Task 9 会接上 pending 状态；此处先以 false 占位。
+#[derive(Serialize, Clone)]
+pub struct PrintItemInput {
+    pub time: Option<String>,
+    pub task_name: String,
+    pub duration_min: u32,
+    pub pending: bool,
+}
+
 /// 打印某天（生成 PDF 并用系统查看器打开）。返回 PDF 路径。
-pub async fn print_day(date: &str) -> Result<String, String> {
+///
+/// 后端签名（Task 6 后）：`print_day(app, date: String, items: Vec<PrintItemInput>)`，
+/// 前端必须同时传 date 与 items。
+pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String, String> {
     #[derive(Serialize)]
     struct Args<'a> {
         date: &'a str,
+        items: Vec<PrintItemInput>,
     }
-    let args = serde_wasm_bindgen::to_value(&Args { date }).map_err(|e| e.to_string())?;
+    let args = serde_wasm_bindgen::to_value(&Args { date, items }).map_err(|e| e.to_string())?;
     let raw = invoke("print_day", args).await;
     serde_wasm_bindgen::from_value::<String>(raw).map_err(|e| e.to_string())
 }

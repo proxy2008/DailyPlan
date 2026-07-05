@@ -59,10 +59,11 @@ pub fn App() -> impl IntoView {
         panel.set(Panel::List);
     };
 
-    // 打印：调后端 print_day 生成 PDF 并打开
-    let on_print = move |date_str: String| {
+    // 打印：调后端 print_day 生成 PDF 并打开。
+    // 后端签名（Task 6 后）需同时传 date + items。
+    let on_print = move |date_str: String, items: Vec<crate::tauri::PrintItemInput>| {
         spawn_local(async move {
-            match crate::tauri::print_day(&date_str).await {
+            match crate::tauri::print_day(&date_str, items).await {
                 Ok(_path) => {
                     if let Some(w) = web_sys::window() {
                         let _ = w.alert_with_message("已生成 PDF 并打开，可在 Preview 中按 Cmd+P 打印");
@@ -85,7 +86,7 @@ pub fn App() -> impl IntoView {
 
         <main class="app-main">
             <section class="col col-left">
-                <DayView date on_print={move |d: String| on_print(d)} />
+                <DayView date on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)} />
             </section>
 
             <section class="col col-right">
