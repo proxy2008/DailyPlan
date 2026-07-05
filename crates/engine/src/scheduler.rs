@@ -21,19 +21,43 @@ pub fn build_day_plan(date: NaiveDate, tasks: &[Task]) -> DayPlan {
         .iter()
         .filter(|t| t.active && t.frequency.matches(date))
         .flat_map(|t| {
-            t.slots.iter().map(move |slot| ChecklistItem {
-                task_id: t.id,
-                task_name: t.name.clone(),
-                start: slot.start,
-                end: slot.end,
-                duration_min: slot.duration_minutes(),
-            })
+            if t.slots.is_empty() {
+                // 无时段任务：产出单个 untimed item
+                vec![ChecklistItem {
+                    task_id: t.id,
+                    task_name: t.name.clone(),
+                    start: None,
+                    end: None,
+                    duration_min: 0,
+                    priority: t.priority_level,
+                    pending: false,
+                }]
+            } else {
+                t.slots
+                    .iter()
+                    .map(move |slot| ChecklistItem {
+                        task_id: t.id,
+                        task_name: t.name.clone(),
+                        start: Some(slot.start),
+                        end: Some(slot.end),
+                        duration_min: slot.duration_minutes(),
+                        priority: t.priority_level,
+                        pending: false,
+                    })
+                    .collect::<Vec<_>>()
+            }
         })
         .collect();
 
-    // 先按 task 的 priority（降序）再按 start（升序）排序，让优先级高的排在前。
-    // priority 在 item 里没存，借用 tasks map 一下；这里简单按 start 排序。
-    items.sort_by(|a, b| a.start.cmp(&b.start).then(a.task_id.cmp(&b.task_id)));
+    // 排序键：无时段 (start=None) 排最后；定时按 start 升序；
+    // 同 start 按优先级降序；最后 task_id 升序稳定 tiebreak。
+    items.sort_by(|a, b| {
+        a.start.is_none()
+            .cmp(&b.start.is_none())
+            .then_with(|| a.start.cmp(&b.start))
+            .then_with(|| b.priority.rank().cmp(&a.priority.rank()))
+            .then_with(|| a.task_id.cmp(&b.task_id))
+    });
 
     let conflicts = detect_conflicts(&items);
 
@@ -48,7 +72,7 @@ pub fn build_day_plan(date: NaiveDate, tasks: &[Task]) -> DayPlan {
 mod tests {
     use super::*;
     use chrono::NaiveTime;
-    use dailyplan_domain::task::{Frequency, TimeSlot};
+    use dailyplan_domain::task::{Frequency, PriorityLevel, TimeSlot};
 
     fn slot(s: &str, e: &str) -> TimeSlot {
         TimeSlot {
@@ -64,7 +88,7 @@ mod tests {
             description: None,
             frequency: freq,
             slots,
-            priority: 0,
+            priority_level: PriorityLevel::Normal,
             active: true,
         }
     }
@@ -123,8 +147,14 @@ mod tests {
         let plan = build_day_plan(date, &[drink_water]);
         assert_eq!(plan.items.len(), 3);
         // 排序后按 start 升序
-        assert_eq!(plan.items[0].start.format("%H:%M").to_string(), "08:00");
-        assert_eq!(plan.items[2].start.format("%H:%M").to_string(), "18:00");
+        assert_eq!(
+            plan.items[0].start.unwrap().format("%H:%M").to_string(),
+            "08:00"
+        );
+        assert_eq!(
+            plan.items[2].start.unwrap().format("%H:%M").to_string(),
+            "18:00"
+        );
     }
 
     #[test]
@@ -164,5 +194,54 @@ mod tests {
         );
         let plan = build_day_plan(date, &[a, b]);
         assert!(plan.conflicts.is_empty(), "首尾相接不算冲突");
+    }
+
+    #[test]
+    fn untimed_task_produces_one_item_at_end() {
+        let date = NaiveDate::from_ymd_opt(2026, 7, 4).unwrap();
+        let timed = task(
+            1,
+            "晨跑",
+            Frequency::Daily { times_per_day: 1 },
+            vec![slot("06:30", "07:00")],
+        );
+        let untimed = task(
+            2,
+            "读书",
+            Frequency::Daily { times_per_day: 1 },
+            vec![], // 无 slots
+        );
+        let plan = build_day_plan(date, &[untimed, timed]);
+        assert_eq!(plan.items.len(), 2);
+        // 定时任务在前，无时段在后
+        assert_eq!(plan.items[0].task_name, "晨跑");
+        assert_eq!(plan.items[1].task_name, "读书");
+        assert!(plan.items[1].start.is_none());
+    }
+
+    #[test]
+    fn untimed_tasks_sorted_by_priority_desc() {
+        let date = NaiveDate::from_ymd_opt(2026, 7, 4).unwrap();
+        let low = Task {
+            id: 1,
+            name: "低".into(),
+            description: None,
+            frequency: Frequency::Daily { times_per_day: 1 },
+            slots: vec![],
+            priority_level: PriorityLevel::Low,
+            active: true,
+        };
+        let urgent = Task {
+            id: 2,
+            name: "急".into(),
+            description: None,
+            frequency: Frequency::Daily { times_per_day: 1 },
+            slots: vec![],
+            priority_level: PriorityLevel::Urgent,
+            active: true,
+        };
+        let plan = build_day_plan(date, &[low, urgent]);
+        assert_eq!(plan.items[0].task_name, "急");
+        assert_eq!(plan.items[1].task_name, "低");
     }
 }

@@ -14,22 +14,27 @@ pub fn detect_conflicts(items: &[ChecklistItem]) -> Vec<Conflict> {
         for j in (i + 1)..n {
             let a = &items[i];
             let b = &items[j];
-            // 已按 start 排序，b.start >= a.start；若 b.start >= a.end 则后续都不可能重叠，可提前 break。
-            if b.start >= a.end {
+            // 无时段 item 不参与冲突检测
+            if a.start.is_none() || b.start.is_none() {
+                continue;
+            }
+            let (a_start, a_end) = (a.start.unwrap(), a.end.unwrap());
+            let (b_start, b_end) = (b.start.unwrap(), b.end.unwrap());
+            // 已按 start 排序，b_start >= a_start；若 b_start >= a_end 则后续都不重叠。
+            if b_start >= a_end {
                 break;
             }
-            // 走到这里说明 b.start < a.end，又因 b.start >= a.start，所以一定重叠。
             out.push(Conflict {
                 item_a: i,
                 item_b: j,
                 message: format!(
                     "“{}”({}-{})与“{}”({}-{})时段重叠",
                     a.task_name,
-                    a.start.format("%H:%M"),
-                    a.end.format("%H:%M"),
+                    a_start.format("%H:%M"),
+                    a_end.format("%H:%M"),
                     b.task_name,
-                    b.start.format("%H:%M"),
-                    b.end.format("%H:%M")
+                    b_start.format("%H:%M"),
+                    b_end.format("%H:%M")
                 ),
             });
         }
@@ -41,14 +46,17 @@ pub fn detect_conflicts(items: &[ChecklistItem]) -> Vec<Conflict> {
 mod tests {
     use super::*;
     use chrono::NaiveTime;
+    use dailyplan_domain::task::PriorityLevel;
 
     fn item(name: &str, s: &str, e: &str) -> ChecklistItem {
         ChecklistItem {
             task_id: 0,
             task_name: name.into(),
-            start: NaiveTime::parse_from_str(s, "%H:%M").unwrap(),
-            end: NaiveTime::parse_from_str(e, "%H:%M").unwrap(),
+            start: Some(NaiveTime::parse_from_str(s, "%H:%M").unwrap()),
+            end: Some(NaiveTime::parse_from_str(e, "%H:%M").unwrap()),
             duration_min: 0,
+            priority: PriorityLevel::Normal,
+            pending: false,
         }
     }
 

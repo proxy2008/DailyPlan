@@ -67,11 +67,15 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
             .items
             .iter()
             .map(|it| PrintItem {
-                time: format!(
-                    "{}-{}",
-                    it.start.format("%H:%M"),
-                    it.end.format("%H:%M")
-                ),
+                time: match (it.start, it.end) {
+                    (Some(s), Some(e)) => format!(
+                        "{}-{}",
+                        s.format("%H:%M"),
+                        e.format("%H:%M")
+                    ),
+                    // 无时段任务：打印时留空，便于手填。
+                    _ => String::new(),
+                },
                 task_name: it.task_name.clone(),
                 duration_min: it.duration_min,
                 note: String::new(),
