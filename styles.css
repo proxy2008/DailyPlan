@@ -735,6 +735,36 @@ span.pri-low { color: var(--text-4); font-size: 0.78em; }
 .hidden { display: none !important; }
 
 /* ===== 编辑器 ===== */
+/* "无固定时间" 横排：checkbox 和文字同一行 */
+.untimed-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5em;
+  font-size: 0.88em;
+  color: var(--text-2);
+  cursor: pointer;
+  padding: 0.5em 0.7em;
+  background: var(--hover-bg);
+  border-radius: var(--radius-sm);
+}
+.untimed-toggle input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--primary);
+}
+.untimed-toggle label {
+  cursor: pointer;
+  font-weight: 500;
+}
+/* 时间段 fieldset：untimed 时置灰禁用（不隐藏，避免高度突变） */
+fieldset.slots.disabled {
+  opacity: 0.45;
+  pointer-events: none;
+  background: var(--hover-bg);
+}
+
 .editor { display: flex; flex-direction: column; gap: 0.9em; }
 .editor h3 {
   margin: 0;
