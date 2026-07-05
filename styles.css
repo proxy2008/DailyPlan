@@ -149,6 +149,29 @@ button.danger:hover { background: #fcecea; border-color: var(--danger); }
 .empty { color: #999; text-align: center; padding: 1.5em 0; }
 .error { color: var(--danger); }
 
+/* ===== 待定标记 ===== */
+tr.pending td { color: #999; text-decoration: line-through; background: #fafafa; }
+.pending-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3em;
+  font-size: 0.8em;
+  color: #888;
+  cursor: pointer;
+}
+.pending-toggle input { width: auto; }
+
+/* 待定区 */
+.pending-section {
+  margin-top: 1em;
+  padding: 0.6em 0.9em;
+  border: 1px dashed #ccc;
+  border-radius: 4px;
+  background: #fafafa;
+}
+.pending-section h4 { margin: 0 0 0.4em; font-size: 0.9em; color: #888; }
+.pending-section ul { margin: 0; padding-left: 1.2em; color: #666; font-size: 0.88em; }
+
 /* ===== 任务列表 ===== */
 .task-list h2, .list-panel h2 {
   font-size: 1.05em;

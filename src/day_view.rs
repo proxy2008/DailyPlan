@@ -3,6 +3,8 @@
 //! 用 RwSignal<Option<Result<DayPlan,String>>> + Effect 手动管理异步加载，
 //! 避免 Resource 对 !Send future 的要求（wasm_bindgen future 含 Rc，非 Send）。
 
+use std::collections::HashSet;
+
 use chrono::NaiveDate;
 use dailyplan_domain::DayPlan;
 use leptos::prelude::*;
@@ -10,9 +12,6 @@ use leptos::task::spawn_local;
 
 /// 当日打卡表视图。
 /// `date` 控制日期；`on_print(date_str, items)` 打印回调，传入日期与构造好的打印 items。
-///
-/// 注：Task 9 会在此加入 `pending_ids` 信号让用户标记待定；
-/// 此 Task 8 暂以 `pending: false` 占位。
 #[component]
 pub fn DayView(
     date: RwSignal<String>,
@@ -21,6 +20,9 @@ pub fn DayView(
     // 当天计划状态：None=加载中，Some(Ok)=成功，Some(Err)=失败。
     let plan = RwSignal::new(None::<Result<DayPlan, String>>);
     let on_print = StoredValue::new(on_print);
+
+    // 待定标记：保存被标记为"待定"的 task_id 集合。
+    let pending_ids = RwSignal::new(HashSet::<i64>::new());
 
     // date 变化时重新加载
     Effect::new(move || {
@@ -54,6 +56,7 @@ pub fn DayView(
                 <button class="primary" on:click=move |_| {
                     if let Some(Ok(ref p)) = plan.get() {
                         let d = date.get();
+                        let pending_set = pending_ids.get();
                         let items: Vec<crate::tauri::PrintItemInput> = p.items.iter().map(|it| {
                             crate::tauri::PrintItemInput {
                                 time: match (it.start, it.end) {
@@ -62,8 +65,7 @@ pub fn DayView(
                                 },
                                 task_name: it.task_name.clone(),
                                 duration_min: it.duration_min,
-                                // Task 9 会用 pending_ids 信号覆盖此值。
-                                pending: false,
+                                pending: pending_set.contains(&it.task_id),
                             }
                         }).collect();
                         on_print.with_value(|f| f(d, items));
@@ -74,14 +76,14 @@ pub fn DayView(
             {move || match plan.get() {
                 None => view! { <p>"生成中…"</p> }.into_any(),
                 Some(Err(e)) => view! { <p class="error">"加载失败: " {e}</p> }.into_any(),
-                Some(Ok(p)) => render_plan(&p),
+                Some(Ok(p)) => render_plan(&p, pending_ids),
             }}
         </div>
     }.into_any()
 }
 
-/// 把 DayPlan 渲染成视图（空态/冲突/表格）。
-fn render_plan(p: &DayPlan) -> AnyView {
+/// 把 DayPlan 渲染成视图（空态/冲突/表格 + 待定区）。
+fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
     if p.items.is_empty() && p.conflicts.is_empty() {
         return view! {
             <div class="day-plan">
@@ -93,7 +95,7 @@ fn render_plan(p: &DayPlan) -> AnyView {
 
     let date_str = p.date.format("%Y-%m-%d").to_string();
     let conflicts: Vec<String> = p.conflicts.iter().map(|c| c.message.clone()).collect();
-    let items: Vec<(String, String, String)> = p
+    let items: Vec<(String, String, String, i64)> = p
         .items
         .iter()
         .map(|it| {
@@ -108,6 +110,7 @@ fn render_plan(p: &DayPlan) -> AnyView {
                 } else {
                     String::new()
                 },
+                it.task_id,
             )
         })
         .collect();
@@ -136,22 +139,62 @@ fn render_plan(p: &DayPlan) -> AnyView {
                         <th>"任务"</th>
                         <th>"时长"</th>
                         <th>"完成"</th>
-                        <th>"备注"</th>
+                        <th>"待定"</th>
                     </tr>
                 </thead>
                 <tbody>
-                    {items.iter().map(|(time, name, dur)| view! {
-                        <tr>
-                            <td>{time.clone()}</td>
-                            <td>{name.clone()}</td>
-                            <td>{dur.clone()}</td>
-                            <td><input type="checkbox" /></td>
-                            <td>" "</td>
-                        </tr>
+                    {items.iter().map(|(time, name, dur, task_id)| {
+                        let task_id = *task_id;
+                        let is_pending = move || pending_ids.get().contains(&task_id);
+                        view! {
+                            <tr class:pending=is_pending>
+                                <td>{time.clone()}</td>
+                                <td>{name.clone()}</td>
+                                <td>{dur.clone()}</td>
+                                <td><input type="checkbox" /></td>
+                                <td>
+                                    <label class="pending-toggle">
+                                        <input type="checkbox" prop:checked=is_pending
+                                            on:change=move |ev| {
+                                                let checked = event_target_checked(&ev);
+                                                pending_ids.update(|s| {
+                                                    if checked { s.insert(task_id); } else { s.remove(&task_id); }
+                                                });
+                                            }/>
+                                        "待定"
+                                    </label>
+                                </td>
+                            </tr>
+                        }
                     }).collect::<Vec<_>>()}
                 </tbody>
             </table>
             <p class="item-count">"共 " {items_len} " 项"</p>
+
+            {move || {
+                let pending = pending_ids.get();
+                if pending.is_empty() { return view! { <span></span> }.into_any(); }
+                let pending_items: Vec<&(String, String, String, i64)> = items.iter()
+                    .filter(|(_, _, _, id)| pending.contains(id))
+                    .collect();
+                view! {
+                    <div class="pending-section">
+                        <h4>"待定"</h4>
+                        <ul>
+                            {pending_items.iter().map(|(_, name, dur, _)| {
+                                let suffix = if dur.is_empty() {
+                                    String::new()
+                                } else {
+                                    format!("（{}）", dur)
+                                };
+                                view! {
+                                    <li>{name.clone()} {suffix}</li>
+                                }
+                            }).collect::<Vec<_>>()}
+                        </ul>
+                    </div>
+                }.into_any()
+            }}
         </div>
     }.into_any()
 }
