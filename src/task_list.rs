@@ -107,14 +107,11 @@ pub fn TaskList(
                                         </button>
                                         <button class="danger"
                                             on:click=move |_| {
-                                                let name = delete_name.clone();
                                                 spawn_local(async move {
-                                                    if confirm_delete(&name) {
-                                                        if let Err(e) = crate::tauri::delete_task(delete_id).await {
-                                                            web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                                        }
-                                                        on_refresh.with_value(|f| f());
+                                                    if let Err(e) = crate::tauri::delete_task(delete_id).await {
+                                                        web_sys::console::error_1(&format!("删除失败: {e}").into());
                                                     }
+                                                    on_refresh.with_value(|f| f());
                                                 });
                                             }>"删除"</button>
                                     </div>
@@ -129,11 +126,4 @@ pub fn TaskList(
             }}
         </div>
     }.into_any()
-}
-
-/// 浏览器原生 confirm（Tauri webview 支持）。
-fn confirm_delete(name: &str) -> bool {
-    web_sys::window()
-        .and_then(|w| w.confirm_with_message(&format!("确定删除任务「{name}」吗？")).ok())
-        .unwrap_or(false)
 }
