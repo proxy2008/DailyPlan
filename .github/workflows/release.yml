@@ -1,0 +1,48 @@
+# 打 tag 时自动构建 macOS .app + .dmg 并发布到 GitHub Release
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Add wasm32 target
+        run: rustup target add wasm32-unknown-unknown
+
+      - name: Install trunk
+        run: cargo install trunk --locked
+
+      - name: Build frontend
+        run: trunk build
+
+      - name: Build and release Tauri app
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tagName: ${{ github.ref_name }}
+          releaseName: "DailyPlan ${{ github.ref_name }}"
+          releaseBody: |
+            ## DailyPlan 每日计划表
+
+            本地桌面应用：录入任务、绑定时段、生成打卡表、打印检查。
+
+            ### 下载
+            - **Apple Silicon (M1/M2/M3)**: `DailyPlan_*_aarch64.dmg`
+            - **Intel Mac**: `DailyPlan_*_x64.dmg`
+
+            ### 安装
+            1. 下载对应架构的 .dmg
+            2. 打开，拖 DailyPlan 到 Applications
+            3. 首次启动右键 → 打开（绕过 Gatekeeper）
+          releaseDraft: false
+          prerelease: false
