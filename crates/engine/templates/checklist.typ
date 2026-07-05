@@ -83,13 +83,21 @@
       table.cell(fill: rgb("f0f2f5"))[*备注*],
     ),
     ..data.items.map(it => {
-      // pending 行整行灰底；untimed (time=null → none) 时间格留空
+      // pending 行整行灰底；pending 的时间格直接写"待定"（去掉原时段），
+      // untimed (time=null → none) 时间格留空
       let cell-fill = if it.pending { luma(230) } else { white }
       let cell(content) = table.cell(fill: cell-fill, content)
+      let time-cell = if it.pending {
+        text(fill: luma(120), style: "italic")[待定]
+      } else if it.time == none {
+        none
+      } else {
+        it.time
+      }
       (
-        cell(if it.time == none { none } else { it.time }),
+        cell(time-cell),
         cell(it.task_name),
-        cell(if it.duration_min > 0 { [ #it.duration_min 分 ] } else { none }),
+        cell(if it.duration_min > 0 and not it.pending { [ #it.duration_min 分 ] } else { none }),
         cell(checkbox()),
         cell(none),
       )
