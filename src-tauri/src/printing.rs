@@ -8,29 +8,24 @@
 
 use std::path::PathBuf;
 
-use chrono::NaiveDate;
-use dailyplan_engine::render::{to_print_data, RenderOptions};
+use dailyplan_engine::render::PrintItemInput;
 use tauri::{AppHandle, Manager};
 use tauri_plugin_shell::process::CommandEvent;
 use tauri_plugin_shell::ShellExt;
 
 use crate::commands::AppError;
-use crate::db::Db;
 
 /// 为指定日期生成 PDF 并打开。
-pub async fn print_day(app: &AppHandle, date_str: &str) -> Result<PathBuf, AppError> {
-    let date = NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
-        .map_err(|e| AppError::BadDate(e.to_string()))?;
-
-    // 读 DB（同步，await 前）
-    let db_state = app.state::<Db>();
-    let tasks = crate::db::list_tasks(&db_state).map_err(|e| AppError::Db(e.to_string()))?;
-    let plan = dailyplan_engine::build_day_plan(date, &tasks);
-
-    let print_data = to_print_data(&plan, &RenderOptions::default());
+pub async fn print_day(
+    app: &AppHandle,
+    items: Vec<PrintItemInput>,
+) -> Result<PathBuf, AppError> {
+    let print_data = dailyplan_engine::render::to_print_data_from_items(
+        items,
+        &dailyplan_engine::render::RenderOptions::default(),
+    );
     let template = dailyplan_engine::render::CHECKLIST_TYP;
 
-    // 写到 app_data_dir/print/ 下（持久、用户可找）
     let dir = app
         .path()
         .app_data_dir()
@@ -41,8 +36,8 @@ pub async fn print_day(app: &AppHandle, date_str: &str) -> Result<PathBuf, AppEr
 
     let typ_path = print_dir.join("checklist.typ");
     let data_path = print_dir.join("data.json");
-    let pdf_path = print_dir
-        .join(format!("dailyplan-{}.pdf", date.format("%Y-%m-%d")));
+    let today_str = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
+    let pdf_path = print_dir.join(format!("dailyplan-{today_str}.pdf"));
 
     let data_json = serde_json::to_string_pretty(&print_data)
         .map_err(|e| AppError::Db(format!("序列化失败: {e}")))?;
@@ -51,8 +46,6 @@ pub async fn print_day(app: &AppHandle, date_str: &str) -> Result<PathBuf, AppEr
     std::fs::write(&data_path, data_json)
         .map_err(|e| AppError::Db(format!("写数据失败: {e}")))?;
 
-    // 调 typst sidecar 编译。
-    // --font-path 指向系统字体目录，确保找到 PingFang SC 等中文字体。
     let shell = app.shell();
     let cmd = shell
         .sidecar("typst")

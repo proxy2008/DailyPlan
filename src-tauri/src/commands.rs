@@ -70,7 +70,10 @@ pub fn generate_day(db: State<'_, Db>, date: String) -> AppResult<DayPlan> {
 
 /// 打印某天：生成 PDF 并用系统查看器打开。
 #[tauri::command]
-pub async fn print_day(app: tauri::AppHandle, date: String) -> AppResult<String> {
-    let pdf_path = crate::printing::print_day(&app, &date).await?;
+pub async fn print_day(
+    app: tauri::AppHandle,
+    items: Vec<dailyplan_engine::render::PrintItemInput>,
+) -> AppResult<String> {
+    let pdf_path = crate::printing::print_day(&app, items).await?;
     Ok(pdf_path.to_string_lossy().to_string())
 }

@@ -9,7 +9,7 @@
 
 use chrono::Datelike;
 use dailyplan_domain::DayPlan;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 
 /// 传给 Typst 模板的、与当天计划无关的渲染选项。
 #[derive(Debug, Clone, Serialize)]
@@ -49,6 +49,15 @@ pub struct PrintItem {
     pub pending: bool,
 }
 
+/// 前端传给 print_day 的单个 item（已标记 pending）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct PrintItemInput {
+    pub time: Option<String>,
+    pub task_name: String,
+    pub duration_min: u32,
+    pub pending: bool,
+}
+
 /// 把 DayPlan + 选项转成可序列化的 PrintData。
 pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
     let weekday_cn = match plan.date.weekday() {
@@ -85,6 +94,43 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
 
 /// 嵌入的 Typst 模板（见 templates/checklist.typ）。
 pub const CHECKLIST_TYP: &str = include_str!("../templates/checklist.typ");
+
+/// 用前端传入的 items（已标记 pending）构造 PrintData。
+/// pending 的 items 重排到末尾。
+pub fn to_print_data_from_items(items: Vec<PrintItemInput>, opts: &RenderOptions) -> PrintData {
+    use chrono::Datelike;
+    let today = chrono::Local::now().date_naive();
+    let weekday_cn = match today.weekday() {
+        chrono::Weekday::Mon => "周一",
+        chrono::Weekday::Tue => "周二",
+        chrono::Weekday::Wed => "周三",
+        chrono::Weekday::Thu => "周四",
+        chrono::Weekday::Fri => "周五",
+        chrono::Weekday::Sat => "周六",
+        chrono::Weekday::Sun => "周日",
+    };
+    // 重排：非 pending 在前，pending 在后
+    let mut sorted: Vec<&PrintItemInput> = items.iter().collect();
+    sorted.sort_by_key(|it| it.pending);
+
+    PrintData {
+        title: opts.title.clone(),
+        date: today.format("%Y-%m-%d").to_string(),
+        weekday_cn: weekday_cn.to_string(),
+        items: sorted
+            .iter()
+            .map(|it| PrintItem {
+                time: it.time.clone(),
+                task_name: it.task_name.clone(),
+                duration_min: it.duration_min,
+                note: String::new(),
+                pending: it.pending,
+            })
+            .collect(),
+        conflicts: Vec::new(),
+        with_review: opts.with_review,
+    }
+}
 
 #[cfg(test)]
 mod tests {
