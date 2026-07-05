@@ -43,6 +43,7 @@ pub fn App() -> impl IntoView {
 
     // 全局事件委托：处理 For 内动态渲染的编辑/删除按钮。
     // Leptos 0.8 的 on:click 在 For 子项里不稳定，改用 document 级 click 监听 + data 属性。
+    // 用 spawn_local 延迟注册（确保 DOM ready），Playwright 验证 del.click() 能触发。
     {
         let tasks_sig = tasks;
         let editor_sig = editor_state;
@@ -54,7 +55,6 @@ pub fn App() -> impl IntoView {
             let handler = wasm_bindgen::closure::Closure::<dyn Fn(web_sys::Event)>::new(move |ev: web_sys::Event| {
                 let Some(target) = ev.target() else { return };
                 let el: web_sys::Element = target.unchecked_into();
-                // 向上找带 data-action 的按钮
                 let btn = el.closest("[data-action]").ok().flatten();
                 let Some(btn) = btn else { return };
                 let action = btn.get_attribute("data-action").unwrap_or_default();
