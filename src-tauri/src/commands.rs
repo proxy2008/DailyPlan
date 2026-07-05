@@ -55,13 +55,7 @@ pub fn update_task(db: State<'_, Db>, task: Task) -> AppResult<()> {
 
 #[tauri::command]
 pub fn delete_task(db: State<'_, Db>, task_id: i64) -> AppResult<()> {
-    eprintln!("[delete_task] 收到删除请求, task_id={}", task_id);
-    let result = db::delete_task(&db, task_id);
-    match &result {
-        Ok(()) => eprintln!("[delete_task] 删除成功"),
-        Err(e) => eprintln!("[delete_task] 删除失败: {:?}", e),
-    }
-    result.map_err(db_err)
+    db::delete_task(&db, task_id).map_err(db_err)
 }
 
 // ===== 当日计划 =====
