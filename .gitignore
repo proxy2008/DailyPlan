@@ -2,3 +2,5 @@
 /target/
 /Cargo.lock
 /.dev-data/
+/.playwright-mcp/
+.DS_Store
