@@ -96,11 +96,15 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
 pub const CHECKLIST_TYP: &str = include_str!("../templates/checklist.typ");
 
 /// 用前端传入的 items（已标记 pending）构造 PrintData。
-/// pending 的 items 重排到末尾。
-pub fn to_print_data_from_items(items: Vec<PrintItemInput>, opts: &RenderOptions) -> PrintData {
-    use chrono::Datelike;
-    let today = chrono::Local::now().date_naive();
-    let weekday_cn = match today.weekday() {
+/// pending 的 items 重排到末尾。`date_str` 是用户选择的日期（YYYY-MM-DD）。
+pub fn to_print_data_from_items(
+    items: Vec<PrintItemInput>,
+    date_str: &str,
+    opts: &RenderOptions,
+) -> PrintData {
+    let date = chrono::NaiveDate::parse_from_str(date_str, "%Y-%m-%d")
+        .unwrap_or_else(|_| chrono::Local::now().date_naive());
+    let weekday_cn = match date.weekday() {
         chrono::Weekday::Mon => "周一",
         chrono::Weekday::Tue => "周二",
         chrono::Weekday::Wed => "周三",
@@ -115,7 +119,7 @@ pub fn to_print_data_from_items(items: Vec<PrintItemInput>, opts: &RenderOptions
 
     PrintData {
         title: opts.title.clone(),
-        date: today.format("%Y-%m-%d").to_string(),
+        date: date.format("%Y-%m-%d").to_string(),
         weekday_cn: weekday_cn.to_string(),
         items: sorted
             .iter()

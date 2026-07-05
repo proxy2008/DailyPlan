@@ -72,8 +72,9 @@ pub fn generate_day(db: State<'_, Db>, date: String) -> AppResult<DayPlan> {
 #[tauri::command]
 pub async fn print_day(
     app: tauri::AppHandle,
+    date: String,
     items: Vec<dailyplan_engine::render::PrintItemInput>,
 ) -> AppResult<String> {
-    let pdf_path = crate::printing::print_day(&app, items).await?;
+    let pdf_path = crate::printing::print_day(&app, &date, items).await?;
     Ok(pdf_path.to_string_lossy().to_string())
 }

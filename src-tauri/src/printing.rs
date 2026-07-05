@@ -18,10 +18,12 @@ use crate::commands::AppError;
 /// 为指定日期生成 PDF 并打开。
 pub async fn print_day(
     app: &AppHandle,
+    date_str: &str,
     items: Vec<PrintItemInput>,
 ) -> Result<PathBuf, AppError> {
     let print_data = dailyplan_engine::render::to_print_data_from_items(
         items,
+        date_str,
         &dailyplan_engine::render::RenderOptions::default(),
     );
     let template = dailyplan_engine::render::CHECKLIST_TYP;
@@ -36,8 +38,7 @@ pub async fn print_day(
 
     let typ_path = print_dir.join("checklist.typ");
     let data_path = print_dir.join("data.json");
-    let today_str = chrono::Local::now().date_naive().format("%Y-%m-%d").to_string();
-    let pdf_path = print_dir.join(format!("dailyplan-{today_str}.pdf"));
+    let pdf_path = print_dir.join(format!("dailyplan-{date_str}.pdf"));
 
     let data_json = serde_json::to_string_pretty(&print_data)
         .map_err(|e| AppError::Db(format!("序列化失败: {e}")))?;
