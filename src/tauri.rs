@@ -56,9 +56,12 @@ pub async fn update_task(task: Task) -> Result<(), String> {
 }
 
 /// 删除任务。
+/// 注意：Tauri 2 自动把后端的 snake_case 参数名转成 camelCase，
+/// 所以前端 args 的 key 必须用 taskId（不是 task_id）。
 pub async fn delete_task(task_id: i64) -> Result<(), String> {
     #[derive(Serialize)]
     struct Args {
+        #[serde(rename = "taskId")]
         task_id: i64,
     }
     let args = serde_wasm_bindgen::to_value(&Args { task_id }).map_err(|e| e.to_string())?;

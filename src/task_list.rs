@@ -48,7 +48,7 @@ fn freq_label(f: &Frequency) -> String {
 
 /// 任务列表组件（只渲染，事件由 app.rs 全局委托处理）。
 #[component]
-pub fn TaskList(tasks: ReadSignal<Vec<Task>>) -> impl IntoView {
+pub fn TaskList(tasks: ReadSignal<Vec<Task>>, confirming: RwSignal<Option<i64>>) -> impl IntoView {
     view! {
         <div class="task-list">
             <h2>"我的任务（" {move || tasks.get().len()} "）"</h2>
@@ -80,8 +80,19 @@ pub fn TaskList(tasks: ReadSignal<Vec<Task>>) -> impl IntoView {
                                 <div class="task-card-actions">
                                     <button type="button" class="btn-task-action"
                                         data-action="edit" data-task-id=id>"编辑"</button>
+                                    // 删除按钮：未确认时显示
                                     <button type="button" class="btn-task-action danger"
-                                        data-action="delete" data-task-id=id>"删除"</button>
+                                        data-action="delete" data-task-id=id
+                                        class:hidden=move || confirming.get() == Some(id)>"删除"</button>
+                                    // 确认区：点删除后显示
+                                    <span class="confirm-inline"
+                                        class:hidden=move || confirming.get() != Some(id)>
+                                        "删除？"
+                                        <button type="button" class="btn-task-action danger"
+                                            data-action="confirm-delete" data-task-id=id>"是"</button>
+                                        <button type="button" class="btn-task-action"
+                                            data-action="cancel-delete" data-task-id=id>"否"</button>
+                                    </span>
                                 </div>
                             </div>
                         }

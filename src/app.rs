@@ -25,6 +25,8 @@ pub fn App() -> impl IntoView {
     let editor_state = RwSignal::new(EditorState::default());
     // 任务列表数据
     let (tasks, set_tasks) = signal::<Vec<Task>>(Vec::new());
+    // 删除确认状态：Some(id) 表示正在确认删除该任务
+    let confirming: RwSignal<Option<i64>> = RwSignal::new(None);
     // 当前查看的日期
     let date = RwSignal::new(chrono::Local::now().date_naive().format("%Y-%m-%d").to_string());
 
@@ -43,12 +45,12 @@ pub fn App() -> impl IntoView {
 
     // 全局事件委托：处理 For 内动态渲染的编辑/删除按钮。
     // Leptos 0.8 的 on:click 在 For 子项里不稳定，改用 document 级 click 监听 + data 属性。
-    // 用 spawn_local 延迟注册（确保 DOM ready），Playwright 验证 del.click() 能触发。
     {
         let tasks_sig = tasks;
         let editor_sig = editor_state;
         let panel_sig = panel;
         let refresh_fn = refresh;
+        let confirming_sig = confirming;
         spawn_local(async move {
             let Some(win) = web_sys::window() else { return };
             let Some(doc) = win.document() else { return };
@@ -71,19 +73,25 @@ pub fn App() -> impl IntoView {
                         }
                     }
                     "delete" => {
-                        let id = id;
+                        // 第一次点：显示确认
+                        confirming_sig.set(Some(id));
+                    }
+                    "confirm-delete" => {
+                        // 点"是"：真删
+                        confirming_sig.set(None);
                         let refresh_fn = refresh_fn;
                         spawn_local(async move {
                             match crate::tauri::delete_task(id).await {
                                 Ok(()) => refresh_fn.with_value(|f| f()),
                                 Err(e) => {
                                     web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                    if let Some(d) = web_sys::window().and_then(|w| w.document()) {
-                                        d.set_title(&format!("❌删除失败: {e}"));
-                                    }
                                 }
                             }
                         });
+                    }
+                    "cancel-delete" => {
+                        // 点"否"：取消
+                        confirming_sig.set(None);
                     }
                     _ => {}
                 }
@@ -152,7 +160,7 @@ pub fn App() -> impl IntoView {
                         view! {
                             <div class="list-panel">
                                 <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                                <TaskList tasks />
+                                <TaskList tasks confirming />
                             </div>
                         }.into_any()
                     }
