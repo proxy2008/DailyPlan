@@ -60,95 +60,62 @@ pub fn TaskList(
 ) -> impl IntoView {
     let on_edit = StoredValue::new(on_edit);
     let on_refresh = StoredValue::new(on_refresh);
-    // 当前正在确认删除的 task id（None = 无）。内联确认，不依赖原生对话框。
-    let confirming: RwSignal<Option<i64>> = RwSignal::new(None);
 
     view! {
         <div class="task-list">
             <h2>"我的任务（" {move || tasks.get().len()} "）"</h2>
-            {move || {
-                let list = tasks.get();
-                if list.is_empty() {
-                    view! {
-                        <p class="empty">"还没有任务，点击「新建任务」开始添加。"</p>
-                    }.into_any()
-                } else {
-                    let cards = list.into_iter()
-                        .map(|t| {
-                            // 在闭包外克隆好编辑/删除需要的数据
-                            let edit_state = EditorState::from_task(&t);
-                            let edit_name = t.name.clone();
-                            let delete_id = t.id;
-                            let freq_str = freq_label(&t.frequency);
-                            let slots_str = t.slots.iter()
-                                .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
-                                .collect::<Vec<_>>()
-                                .join("   ");
-                            let priority_label = t.priority_level.label_cn();
-                            let priority_class = match t.priority_level {
-                                dailyplan_domain::PriorityLevel::Urgent => "pri-urgent",
-                                dailyplan_domain::PriorityLevel::High => "pri-high",
-                                dailyplan_domain::PriorityLevel::Normal => "pri-normal",
-                                dailyplan_domain::PriorityLevel::Low => "pri-low",
-                            };
-                            let show_priority = t.priority_level != dailyplan_domain::PriorityLevel::Normal;
-                            view! {
-                                <div class="task-card">
-                                    <div class="task-card-main">
-                                        <span class="task-name">{edit_name}</span>
-                                        <span class="task-freq">{freq_str}</span>
-                                        <span class="task-slots">{slots_str}</span>
-                                        {show_priority.then(|| view! {
-                                            <span class=priority_class>{format!("优先级:{}", priority_label)}</span>
-                                        })}
-                                    </div>
-                                    <div class="task-card-actions">
-                                        <button on:click=move |_| on_edit.with_value(|f| f(edit_state.clone()))>
-                                            "编辑"
-                                        </button>
-                                        // 删除按钮：未确认时显示
-                                        <button class="danger"
-                                            class:hidden=move || confirming.get() == Some(delete_id)
-                                            on:click=move |_| {
-                                                confirming.set(Some(delete_id));
-                                            }>"删除"</button>
-                                        // 确认按钮：点删除后显示
-                                        <span class="confirm-inline"
-                                            class:hidden=move || confirming.get() != Some(delete_id)>
-                                            "删除？"
-                                            <button class="danger"
-                                                on:click=move |_| {
-                                                    let id = delete_id;
-                                                    spawn_local(async move {
-                                                        match crate::tauri::delete_task(id).await {
-                                                            Ok(()) => {
-                                                                confirming.set(None);
-                                                                on_refresh.with_value(|f| f());
-                                                            }
-                                                            Err(e) => {
-                                                                // 显示在界面上（alert 在 WKWebView 可能不行，
-                                                                // 用 document.title 临时存错误 + console 双管齐下）
-                                                                web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                                                if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                                                                    doc.set_title(&format!("❌删除失败: {e}"));
-                                                                }
-                                                                confirming.set(None);
-                                                            }
-                                                        }
-                                                    });
-                                                }>"是"</button>
-                                            <button
-                                                on:click=move |_| confirming.set(None)>"否"</button>
-                                        </span>
-                                    </div>
+            <div class="cards">
+                <For each=move || tasks.get() key=|t| t.id let(t)>
+                    {move || {
+                        let edit_state = EditorState::from_task(&t);
+                        let name = t.name.clone();
+                        let id = t.id;
+                        let freq = freq_label(&t.frequency);
+                        let slots = t.slots.iter()
+                            .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
+                            .collect::<Vec<_>>().join("   ");
+                        let pl = t.priority_level.label_cn().to_string();
+                        let pc = match t.priority_level {
+                            dailyplan_domain::PriorityLevel::Urgent => "pri-urgent",
+                            dailyplan_domain::PriorityLevel::High => "pri-high",
+                            dailyplan_domain::PriorityLevel::Normal => "pri-normal",
+                            dailyplan_domain::PriorityLevel::Low => "pri-low",
+                        }.to_string();
+                        let show_pri = t.priority_level != dailyplan_domain::PriorityLevel::Normal;
+                        view! {
+                            <div class="task-card">
+                                <div class="task-card-main">
+                                    <span class="task-name">{name.clone()}</span>
+                                    <span class="task-freq">{freq}</span>
+                                    <span class="task-slots">{slots}</span>
+                                    {show_pri.then(|| view! { <span class=pc.clone()>{format!("优先级:{}", pl)}</span> })}
                                 </div>
-                            }.into_any()
-                        })
-                        .collect::<Vec<_>>();
-                    view! {
-                        <div class="cards">{cards}</div>
-                    }.into_any()
-                }
+                                <div class="task-card-actions">
+                                    <button type="button" on:click=move |_| on_edit.with_value(|f| f(edit_state.clone()))>"编辑"</button>
+                                    <button type="button" class="danger" on:click=move |_| {
+                                        let id = id;
+                                        spawn_local(async move {
+                                            match crate::tauri::delete_task(id).await {
+                                                Ok(()) => { on_refresh.with_value(|f| f()); }
+                                                Err(e) => {
+                                                    web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                                                        doc.set_title(&format!("❌删除失败: {e}"));
+                                                    }
+                                                }
+                                            }
+                                        });
+                                    }>"删除"</button>
+                                </div>
+                            </div>
+                        }
+                    }}
+                </For>
+            </div>
+            {move || if tasks.get().is_empty() {
+                Some(view! { <p class="empty">"还没有任务，点击「新建任务」开始添加。"</p> })
+            } else {
+                None
             }}
         </div>
     }.into_any()
