@@ -42,10 +42,11 @@ pub struct PrintData {
 
 #[derive(Debug, Serialize)]
 pub struct PrintItem {
-    pub time: String,      // "06:30-07:00"
+    pub time: Option<String>,   // None 表示无时段（PDF 留空）
     pub task_name: String,
     pub duration_min: u32,
-    pub note: String, // 空字符串，留手写
+    pub note: String,
+    pub pending: bool,
 }
 
 /// 把 DayPlan + 选项转成可序列化的 PrintData。
@@ -68,17 +69,13 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
             .iter()
             .map(|it| PrintItem {
                 time: match (it.start, it.end) {
-                    (Some(s), Some(e)) => format!(
-                        "{}-{}",
-                        s.format("%H:%M"),
-                        e.format("%H:%M")
-                    ),
-                    // 无时段任务：打印时留空，便于手填。
-                    _ => String::new(),
+                    (Some(s), Some(e)) => Some(format!("{}-{}", s.format("%H:%M"), e.format("%H:%M"))),
+                    _ => None,
                 },
                 task_name: it.task_name.clone(),
                 duration_min: it.duration_min,
                 note: String::new(),
+                pending: it.pending,
             })
             .collect(),
         conflicts: plan.conflicts.iter().map(|c| c.message.clone()).collect(),
