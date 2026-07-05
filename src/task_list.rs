@@ -1,10 +1,7 @@
-//! 任务列表组件：展示所有任务，支持编辑/删除。
+//! 任务列表组件：展示所有任务（事件由 app.rs 全局委托处理）。
 
 use dailyplan_domain::{Frequency, Task};
 use leptos::prelude::*;
-use leptos::task::spawn_local;
-
-use crate::task_editor::EditorState;
 
 /// 把频率转成中文简述。
 fn freq_label(f: &Frequency) -> String {
@@ -49,25 +46,15 @@ fn freq_label(f: &Frequency) -> String {
     }
 }
 
-/// 任务列表组件。
-/// `tasks` 是当前任务列表信号；`on_edit` 点击编辑时回调（传 task 副本）；
-/// `on_refresh` 删除后刷新。
+/// 任务列表组件（只渲染，事件由 app.rs 全局委托处理）。
 #[component]
-pub fn TaskList(
-    tasks: ReadSignal<Vec<Task>>,
-    on_edit: impl Fn(EditorState) + Send + Sync + 'static,
-    on_refresh: impl Fn() + Send + Sync + 'static,
-) -> impl IntoView {
-    let on_edit = StoredValue::new(on_edit);
-    let on_refresh = StoredValue::new(on_refresh);
-
+pub fn TaskList(tasks: ReadSignal<Vec<Task>>) -> impl IntoView {
     view! {
         <div class="task-list">
             <h2>"我的任务（" {move || tasks.get().len()} "）"</h2>
             <div class="cards">
                 <For each=move || tasks.get() key=|t| t.id let(t)>
                     {move || {
-                        let edit_state = EditorState::from_task(&t);
                         let name = t.name.clone();
                         let id = t.id;
                         let freq = freq_label(&t.frequency);
@@ -91,21 +78,10 @@ pub fn TaskList(
                                     {show_pri.then(|| view! { <span class=pc.clone()>{format!("优先级:{}", pl)}</span> })}
                                 </div>
                                 <div class="task-card-actions">
-                                    <button type="button" on:click=move |_| on_edit.with_value(|f| f(edit_state.clone()))>"编辑"</button>
-                                    <button type="button" class="danger" on:click=move |_| {
-                                        let id = id;
-                                        spawn_local(async move {
-                                            match crate::tauri::delete_task(id).await {
-                                                Ok(()) => { on_refresh.with_value(|f| f()); }
-                                                Err(e) => {
-                                                    web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                                    if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
-                                                        doc.set_title(&format!("❌删除失败: {e}"));
-                                                    }
-                                                }
-                                            }
-                                        });
-                                    }>"删除"</button>
+                                    <button type="button" class="btn-task-action"
+                                        data-action="edit" data-task-id=id>"编辑"</button>
+                                    <button type="button" class="btn-task-action danger"
+                                        data-action="delete" data-task-id=id>"删除"</button>
                                 </div>
                             </div>
                         }

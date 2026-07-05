@@ -3,6 +3,7 @@
 use dailyplan_domain::Task;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
+use wasm_bindgen::JsCast;
 
 use crate::day_view::DayView;
 use crate::task_editor::{EditorState, TaskEditor};
@@ -40,13 +41,60 @@ pub fn App() -> impl IntoView {
     // 初始加载
     refresh.with_value(|f| f());
 
+    // 全局事件委托：处理 For 内动态渲染的编辑/删除按钮。
+    // Leptos 0.8 的 on:click 在 For 子项里不稳定，改用 document 级 click 监听 + data 属性。
+    {
+        let tasks_sig = tasks;
+        let editor_sig = editor_state;
+        let panel_sig = panel;
+        let refresh_fn = refresh;
+        spawn_local(async move {
+            let Some(win) = web_sys::window() else { return };
+            let Some(doc) = win.document() else { return };
+            let handler = wasm_bindgen::closure::Closure::<dyn Fn(web_sys::Event)>::new(move |ev: web_sys::Event| {
+                let Some(target) = ev.target() else { return };
+                let el: web_sys::Element = target.unchecked_into();
+                // 向上找带 data-action 的按钮
+                let btn = el.closest("[data-action]").ok().flatten();
+                let Some(btn) = btn else { return };
+                let action = btn.get_attribute("data-action").unwrap_or_default();
+                let id_str = btn.get_attribute("data-task-id").unwrap_or_default();
+                let id: i64 = id_str.parse().unwrap_or(-1);
+                if id < 0 { return; }
+                match action.as_str() {
+                    "edit" => {
+                        let list = tasks_sig.get();
+                        if let Some(t) = list.iter().find(|t| t.id == id) {
+                            let state = EditorState::from_task(t);
+                            editor_sig.set(state);
+                            panel_sig.set(Panel::Editor);
+                        }
+                    }
+                    "delete" => {
+                        let id = id;
+                        let refresh_fn = refresh_fn;
+                        spawn_local(async move {
+                            match crate::tauri::delete_task(id).await {
+                                Ok(()) => refresh_fn.with_value(|f| f()),
+                                Err(e) => {
+                                    web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                    if let Some(d) = web_sys::window().and_then(|w| w.document()) {
+                                        d.set_title(&format!("❌删除失败: {e}"));
+                                    }
+                                }
+                            }
+                        });
+                    }
+                    _ => {}
+                }
+            });
+            let _ = doc.add_event_listener_with_callback("click", handler.as_ref().unchecked_ref());
+            std::mem::forget(handler);
+        });
+    }
+
     let start_create = move || {
         editor_state.set(EditorState::default());
-        panel.set(Panel::Editor);
-    };
-
-    let start_edit = move |state: EditorState| {
-        editor_state.set(state);
         panel.set(Panel::Editor);
     };
 
@@ -104,7 +152,7 @@ pub fn App() -> impl IntoView {
                         view! {
                             <div class="list-panel">
                                 <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                                <TaskList tasks on_edit={start_edit} on_refresh={move || refresh.with_value(|f| f())} />
+                                <TaskList tasks />
                             </div>
                         }.into_any()
                     }
