@@ -22,6 +22,10 @@
   --input-text: #1f2329;
   --muted-text: #666;
   --freq-text: #5b7a9e;
+  --btn-hover-bg: #f0f4ff;
+  --btn-active-bg: #e8e8e8;
+  --danger-border: #f1c0bd;
+  --danger-hover-bg: #fcecea;
 }
 
 * { box-sizing: border-box; }
@@ -97,8 +101,8 @@ button {
   cursor: pointer;
   transition: all 0.15s;
 }
-button:hover { border-color: var(--primary); }
-button:active { background: #f0f4ff; }
+button:hover { border-color: var(--primary); background: var(--btn-hover-bg); }
+button:active { background: var(--btn-active-bg); }
 button.primary {
   background: var(--primary);
   color: #fff;
@@ -106,8 +110,8 @@ button.primary {
 }
 button.primary:hover { background: var(--primary-hover); }
 button.block { width: 100%; margin-bottom: 0.8em; }
-button.danger { color: var(--danger); border-color: #f1c0bd; }
-button.danger:hover { background: #fcecea; border-color: var(--danger); }
+button.danger { color: var(--danger); border-color: var(--danger-border); }
+button.danger:hover { background: var(--danger-hover-bg); border-color: var(--danger); }
 
 /* ===== 当日视图 ===== */
 .day-toolbar {
@@ -320,6 +324,10 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
     --input-text: #e6e6e6;
     --muted-text: #b0b0b0;
     --freq-text: #8ba8c4;
+    --btn-hover-bg: #3a3a3c;
+    --btn-active-bg: #404040;
+    --danger-border: #5a3a38;
+    --danger-hover-bg: #3d2825;
   }
   button {
     background: #2d2d2d;
