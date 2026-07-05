@@ -11,10 +11,11 @@ use leptos::prelude::*;
 use leptos::task::spawn_local;
 
 /// 当日打卡表视图。
-/// `date` 控制日期；`on_print(date_str, items)` 打印回调，传入日期与构造好的打印 items。
+/// `date` 控制日期；`tasks` 追踪任务列表变化自动刷新；`on_print` 打印回调。
 #[component]
 pub fn DayView(
     date: RwSignal<String>,
+    tasks: ReadSignal<Vec<dailyplan_domain::Task>>,
     on_print: impl Fn(String, Vec<crate::tauri::PrintItemInput>) + Send + Sync + 'static,
 ) -> impl IntoView {
     // 当天计划状态：None=加载中，Some(Ok)=成功，Some(Err)=失败。
@@ -24,9 +25,10 @@ pub fn DayView(
     // 待定标记：保存被标记为"待定"的 task_id 集合。
     let pending_ids = RwSignal::new(HashSet::<i64>::new());
 
-    // date 变化时重新加载
+    // date 或 tasks 变化时重新加载（增删改任务后自动刷新当天打卡表）
     Effect::new(move || {
         let d = date.get();
+        let _ = tasks.get(); // 追踪 tasks 信号变化
         plan.set(None);
         spawn_local(async move {
             let result = crate::tauri::generate_day(&d).await;

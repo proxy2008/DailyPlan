@@ -142,7 +142,7 @@ pub fn App() -> impl IntoView {
 
         <main class="app-main">
             <section class="col col-left">
-                <DayView date on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)} />
+                <DayView date tasks on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)} />
             </section>
 
             <section class="col col-right">
