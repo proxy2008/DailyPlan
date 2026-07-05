@@ -46,8 +46,9 @@ jobs:
           TYPST_VER="0.15.0"
           TARGET="x86_64-pc-windows-msvc"
           mkdir -p src-tauri/binaries
-          curl -sSL -o /tmp/typst.tar.xz "https://github.com/typst/typst/releases/download/v${TYPST_VER}/typst-${TARGET}.tar.xz"
-          tar xf /tmp/typst.tar.xz -C /tmp
+          # Windows 用 zip 格式（runner 没装 xz）
+          curl -sSL -o /tmp/typst.zip "https://github.com/typst/typst/releases/download/v${TYPST_VER}/typst-${TARGET}.zip"
+          unzip -o /tmp/typst.zip -d /tmp > /dev/null
           cp "/tmp/typst-${TARGET}/typst.exe" "src-tauri/binaries/typst-${TARGET}.exe"
           chmod +x "src-tauri/binaries/typst-${TARGET}.exe"
 
