@@ -280,10 +280,11 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
     border: 1px solid var(--border);
     border-radius: 3px;
     background: #fff;
+    color: #1f2329;
     font-size: 0.85em;
     cursor: pointer;
 }
-.calendar-cell.header { font-weight: 600; background: #f7f8fa; cursor: default; }
+.calendar-cell.header { font-weight: 600; background: #f7f8fa; color: #555; cursor: default; }
 .calendar-cell.empty { border: none; background: transparent; cursor: default; }
 .calendar-cell.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
 .calendar-summary {
@@ -308,4 +309,8 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
   input::placeholder { color: #888; }
   .checklist th { background: #2d2d2d; }
   .task-card { background: #2d2d2d; }
+  /* 日历：暗色模式下深底浅字 */
+  .calendar-cell { background: #2d2d2d; color: #e6e6e6; }
+  .calendar-cell.header { background: #3a3a3a; color: #ccc; }
+  .calendar-cell.selected { background: var(--primary); color: #fff; }
 }

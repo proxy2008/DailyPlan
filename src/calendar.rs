@@ -65,9 +65,9 @@ pub fn Calendar(selected: RwSignal<Vec<NaiveDate>>) -> impl IntoView {
     view! {
         <div class="calendar">
             <div class="calendar-nav">
-                <button on:click=move |_| prev_month()>"‹"</button>
+                <button type="button" on:click=move |_| prev_month()>"‹"</button>
                 <span>{move || format!("{} 年 {} 月", view_year.get(), view_month.get())}</span>
-                <button on:click=move |_| next_month()>"›"</button>
+                <button type="button" on:click=move |_| next_month()>"›"</button>
             </div>
             <div class="calendar-grid">
                 {HEADERS.iter().copied().map(|h| view! { <div class="calendar-cell header">{h}</div> }).collect::<Vec<_>>()}
@@ -81,7 +81,7 @@ pub fn Calendar(selected: RwSignal<Vec<NaiveDate>>) -> impl IntoView {
                                 let is_selected = sel.contains(&d);
                                 let d_for_click = d;
                                 view! {
-                                    <button class="calendar-cell" class:selected=is_selected
+                                    <button type="button" class="calendar-cell" class:selected=move || is_selected
                                         on:click=move |_| {
                                             selected.update(|s| {
                                                 if let Some(pos) = s.iter().position(|x| *x == d_for_click) {
@@ -103,7 +103,7 @@ pub fn Calendar(selected: RwSignal<Vec<NaiveDate>>) -> impl IntoView {
             </div>
             <div class="calendar-summary">
                 {move || format!("已选 {} 个日期", selected.get().len())}
-                <button on:click=move |_| selected.update(|s| s.clear())>"清空"</button>
+                <button type="button" on:click=move |_| selected.update(|s| s.clear())>"清空"</button>
             </div>
         </div>
     }.into_any()
