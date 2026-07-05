@@ -112,6 +112,7 @@ pub fn TaskManage(
                 <input class="search-input" type="text" placeholder="🔍  搜索任务名或要求…"
                     prop:value=move || search_kw.get()
                     on:input=move |ev| search_kw.set(event_target_value(&ev)) />
+                <div class="toolbar-divider"></div>
                 <select class="filter-select"
                     on:change=move |ev| {
                         let v = event_target_value(&ev);
