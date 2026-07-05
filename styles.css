@@ -20,6 +20,8 @@
   --pending-bg: #fafafa;
   --input-bg: #ffffff;
   --input-text: #1f2329;
+  --muted-text: #666;
+  --freq-text: #5b7a9e;
 }
 
 * { box-sizing: border-box; }
@@ -172,8 +174,8 @@ tr.pending td { color: #999; text-decoration: line-through; background: var(--pe
   border-radius: 4px;
   background: var(--pending-bg);
 }
-.pending-section h4 { margin: 0 0 0.4em; font-size: 0.9em; color: #888; }
-.pending-section ul { margin: 0; padding-left: 1.2em; color: #666; font-size: 0.88em; }
+.pending-section h4 { margin: 0 0 0.4em; font-size: 0.9em; color: var(--muted-text); }
+.pending-section ul { margin: 0; padding-left: 1.2em; color: var(--muted-text); font-size: 0.88em; }
 
 /* ===== 任务列表 ===== */
 .task-list h2, .list-panel h2 {
@@ -198,7 +200,7 @@ tr.pending td { color: #999; text-decoration: line-through; background: var(--pe
   flex: 1;
 }
 .task-name { font-weight: 600; }
-.task-freq { color: var(--primary); font-size: 0.82em; }
+.task-freq { color: var(--freq-text); font-size: 0.82em; }
 .task-slots { color: #666; font-size: 0.82em; font-variant-numeric: tabular-nums; }
 .task-priority { color: #999; font-size: 0.78em; }
 .pri-urgent { color: #d93025; font-weight: 600; font-size: 0.78em; }
@@ -314,8 +316,10 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
     --card-bg: #252526;
     --border: #3a3a3a;
     --pending-bg: #2a2a2b;
-    --input-bg: #2d2d2d;
+    --input-bg: #38383a;
     --input-text: #e6e6e6;
+    --muted-text: #b0b0b0;
+    --freq-text: #8ba8c4;
   }
   button {
     background: #2d2d2d;
@@ -329,4 +333,10 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
   .calendar-cell { background: #2d2d2d; color: #e6e6e6; }
   .calendar-cell.header { background: #3a3a3a; color: #ccc; }
   .calendar-cell.selected { background: var(--primary); color: #fff; }
+  /* 复选框暗色模式：深底浅边 */
+  input[type="checkbox"] {
+    accent-color: var(--primary);
+    background: #38383a;
+    border-color: #555;
+  }
 }
