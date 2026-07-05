@@ -99,7 +99,7 @@
         cell(it.task_name),
         cell(if it.duration_min > 0 and not it.pending { [ #it.duration_min 分 ] } else { none }),
         cell(checkbox()),
-        cell(none),
+        cell(it.note),
       )
     }).flatten(),
   )
