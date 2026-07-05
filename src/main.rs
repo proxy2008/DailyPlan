@@ -1,9 +1,11 @@
 mod app;
 mod calendar;
 mod day_view;
+mod sidebar;
 mod tauri;
 mod task_editor;
 mod task_list;
+mod task_manage;
 
 use app::*;
 use leptos::prelude::*;

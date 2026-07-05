@@ -78,3 +78,19 @@ pub async fn print_day(
     let pdf_path = crate::printing::print_day(&app, &date, items).await?;
     Ok(pdf_path.to_string_lossy().to_string())
 }
+
+/// 多日连续打印：从 start_date 起连续 days 天，合并到一个 PDF。
+/// 注意 Tauri 2 会把 snake_case 参数名转成 camelCase：前端须传 `startDate`。
+#[tauri::command]
+pub async fn print_days(
+    app: tauri::AppHandle,
+    db: State<'_, Db>,
+    start_date: String,
+    days: u32,
+) -> AppResult<String> {
+    let start = NaiveDate::parse_from_str(&start_date, "%Y-%m-%d")
+        .map_err(|e| AppError::BadDate(e.to_string()))?;
+    let tasks = db::list_tasks(&db).map_err(db_err)?;
+    let pdf_path = crate::printing::print_days(&app, start, days, &tasks).await?;
+    Ok(pdf_path.to_string_lossy().to_string())
+}

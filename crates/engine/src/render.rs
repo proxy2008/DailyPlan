@@ -85,7 +85,7 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
                 },
                 task_name: it.task_name.clone(),
                 duration_min: it.duration_min,
-                note: String::new(),
+                note: it.requirement.clone(),
                 pending: it.pending,
             })
             .collect(),
@@ -96,6 +96,15 @@ pub fn to_print_data(plan: &DayPlan, opts: &RenderOptions) -> PrintData {
 
 /// 嵌入的 Typst 模板（见 templates/checklist.typ）。
 pub const CHECKLIST_TYP: &str = include_str!("../templates/checklist.typ");
+
+/// 多日 Typst 模板：data.json 是 PrintData 数组，每天一页。
+pub const CHECKLIST_MULTI_TYP: &str = include_str!("../templates/checklist_multi.typ");
+
+/// 把多个 DayPlan 转成多日打印数据（Vec<PrintData>）。
+/// 多日模式不处理 pending（全部 false）、不重排、note 来自 task.description。
+pub fn to_print_data_multi(plans: &[DayPlan], opts: &RenderOptions) -> Vec<PrintData> {
+    plans.iter().map(|p| to_print_data(p, opts)).collect()
+}
 
 /// 用前端传入的 items（已标记 pending）构造 PrintData。
 /// pending 的 items 重排到末尾。`date_str` 是用户选择的日期（YYYY-MM-DD）。

@@ -128,7 +128,7 @@ pub(crate) fn weekday_to_index(d: Weekday) -> usize {
 }
 
 /// 一个任务定义。
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Task {
     pub id: i64,
     pub name: String,

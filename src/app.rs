@@ -6,11 +6,12 @@ use leptos::task::spawn_local;
 use wasm_bindgen::JsCast;
 
 use crate::day_view::DayView;
+use crate::sidebar::{Page, Sidebar};
 use crate::task_editor::{EditorState, TaskEditor};
-use crate::task_list::TaskList;
+use crate::task_manage::TaskManage;
 
-/// 当前展示哪个面板。
-#[derive(Clone, PartialEq)]
+/// 当前是否在编辑器浮层（modal）。
+#[derive(Clone, Copy, PartialEq, Eq)]
 enum Panel {
     List,
     Editor,
@@ -19,7 +20,9 @@ enum Panel {
 /// 应用根组件。
 #[component]
 pub fn App() -> impl IntoView {
-    // 视图切换
+    // 当前页面（日程 / 任务管理）
+    let page = RwSignal::new(Page::Schedule);
+    // 编辑器浮层开关
     let panel = RwSignal::new(Panel::List);
     // 编辑器初始状态
     let editor_state = RwSignal::new(EditorState::default());
@@ -141,19 +144,70 @@ pub fn App() -> impl IntoView {
         });
     };
 
-    view! {
-        <main class="app-main">
-            <section class="col col-left">
-                <DayView date tasks on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)} />
-            </section>
+    // 多日打印弹窗状态
+    let multi_day_open = RwSignal::new(false);
+    let multi_day_count = RwSignal::new(7u32);
+    let multi_day_busy = RwSignal::new(false);
 
-            <section class="col col-right">
-                <div class="list-panel">
-                    <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                                <TaskList tasks confirming tasks_rev />
-                </div>
-            </section>
-        </main>
+    // 触发多日弹窗（从 DayView 的打印下拉菜单调用）
+    let on_print_days = move || {
+        multi_day_count.set(7);
+        multi_day_open.set(true);
+    };
+
+    // 执行多日打印：从当前选中日期起 N 天
+    let do_multi_print = move || {
+        let start = date.get();
+        let days = multi_day_count.get().clamp(1, 31);
+        multi_day_busy.set(true);
+        spawn_local(async move {
+            match crate::tauri::print_days(&start, days).await {
+                Ok(_path) => {
+                    multi_day_busy.set(false);
+                    multi_day_open.set(false);
+                    if let Some(w) = web_sys::window() {
+                        let _ = w.alert_with_message(&format!(
+                            "已生成 {} 天的 PDF 并打开（从 {} 起）",
+                            days, start
+                        ));
+                    }
+                }
+                Err(e) => {
+                    multi_day_busy.set(false);
+                    if let Some(w) = web_sys::window() {
+                        let _ = w.alert_with_message(&format!("多日打印失败: {e}"));
+                    }
+                }
+            }
+        });
+    };
+
+    view! {
+        <div class="app-shell">
+            <Sidebar page />
+            <main class="page">
+                {move || match page.get() {
+                    Page::Schedule => view! {
+                        <section class="page-schedule">
+                            <DayView
+                                date
+                                tasks
+                                on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)}
+                                on_print_days={move || on_print_days()}
+                            />
+                        </section>
+                    }.into_any(),
+                    Page::TaskManage => view! {
+                        <section class="page-tasks">
+                            <div class="list-panel">
+                                <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
+                                <TaskManage tasks confirming tasks_rev />
+                            </div>
+                        </section>
+                    }.into_any(),
+                }}
+            </main>
+        </div>
 
         // 编辑器浮层（modal）：点新建/编辑时弹出，不改变底层布局
         {move || {
@@ -173,6 +227,39 @@ pub fn App() -> impl IntoView {
             } else {
                 None
             }
+        }}
+
+        // 多日打印弹窗
+        {move || {
+            if !multi_day_open.get() {
+                return None;
+            }
+            let today_str = date.get();
+            Some(view! {
+                <div class="modal-overlay" on:click=move |_| multi_day_open.set(false)>
+                    <div class="modal-content multi-day-dialog" on:click=move |ev| ev.stop_propagation()>
+                        <h3>"打印多日"</h3>
+                        <p>"从 " {today_str.clone()} " 起，连续 "
+                            <input type="number" class="multi-day-input" min="1" max="31"
+                                prop:value=move || multi_day_count.get()
+                                on:input=move |ev| {
+                                    let v = event_target_value(&ev).parse::<u32>().unwrap_or(7);
+                                    multi_day_count.set(v);
+                                } />
+                            " 天"
+                        </p>
+                        <p class="multi-day-hint">"将生成多天的打卡表，每天一页，合并到 1 个 PDF。"</p>
+                        <div class="editor-actions">
+                            <button on:click=move |_| multi_day_open.set(false)>"取消"</button>
+                            <button class="primary"
+                                disabled=move || multi_day_busy.get()
+                                on:click=move |_| do_multi_print()>
+                                {move || if multi_day_busy.get() { "生成中…" } else { "生成 PDF" }}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            })
         }}
     }.into_any()
 }
