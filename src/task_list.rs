@@ -60,6 +60,8 @@ pub fn TaskList(
 ) -> impl IntoView {
     let on_edit = StoredValue::new(on_edit);
     let on_refresh = StoredValue::new(on_refresh);
+    // 当前正在确认删除的 task id（None = 无）。内联确认，不依赖原生对话框。
+    let confirming: RwSignal<Option<i64>> = RwSignal::new(None);
 
     view! {
         <div class="task-list">
@@ -107,17 +109,35 @@ pub fn TaskList(
                                         </button>
                                         <button class="danger"
                                             on:click=move |_| {
-                                                let name = delete_name.clone();
-                                                spawn_local(async move {
-                                                    let msg = format!("确定删除任务「{}」吗？此操作不可撤销。", name);
-                                                    if crate::tauri::confirm_yes_no(&msg, "确认删除").await.unwrap_or(false) {
-                                                        if let Err(e) = crate::tauri::delete_task(delete_id).await {
-                                                            web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                                        }
-                                                        on_refresh.with_value(|f| f());
-                                                    }
-                                                });
+                                                confirming.set(Some(delete_id));
                                             }>"删除"</button>
+                                        {move || confirming.get().map(|id| if id == delete_id {
+                                            view! {
+                                                <span class="confirm-inline">
+                                                    "删除？"
+                                                    <button class="danger"
+                                                        on:click=move |_| {
+                                                            let id = delete_id;
+                                                            spawn_local(async move {
+                                                                match crate::tauri::delete_task(id).await {
+                                                                    Ok(()) => {
+                                                                        confirming.set(None);
+                                                                        on_refresh.with_value(|f| f());
+                                                                    }
+                                                                    Err(e) => {
+                                                                        web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                                        confirming.set(None);
+                                                                    }
+                                                                }
+                                                            });
+                                                        }>"是"</button>
+                                                    <button
+                                                        on:click=move |_| confirming.set(None)>"否"</button>
+                                                </span>
+                                            }.into_any()
+                                        } else {
+                                            view! { <span></span> }.into_any()
+                                        })}
                                     </div>
                                 </div>
                             }.into_any()

@@ -49,8 +49,17 @@ pub async fn delete_task(task_id: i64) -> Result<(), String> {
         task_id: i64,
     }
     let args = serde_wasm_bindgen::to_value(&Args { task_id }).map_err(|e| e.to_string())?;
-    let _ = invoke("delete_task", args).await;
-    Ok(())
+    let raw = invoke("delete_task", args).await;
+    // 后端返回 Result<(), String>；成功时 raw 是 null/undefined，失败时 invoke 会 reject。
+    // 尝试解析为字符串错误，解析失败视为成功。
+    if raw.is_null() || raw.is_undefined() {
+        Ok(())
+    } else {
+        match serde_wasm_bindgen::from_value::<String>(raw) {
+            Ok(e) => Err(e),
+            Err(_) => Ok(()),
+        }
+    }
 }
 
 /// 生成某天的打卡表。date 格式 YYYY-MM-DD。
@@ -109,7 +118,10 @@ pub async fn confirm_yes_no(message: &str, title: &str) -> Result<bool, String> 
     })
     .map_err(|e| e.to_string())?;
     let raw = invoke("plugin:dialog|message", args).await;
+    // 调试：打印原始返回值，排查"确认后未删除"
+    web_sys::console::log_1(&format!("dialog raw return: {:?}", raw).into());
     let result: String = serde_wasm_bindgen::from_value(raw).map_err(|e| e.to_string())?;
+    web_sys::console::log_1(&format!("dialog parsed: {:?}", result).into());
     Ok(result == "Yes")
 }
 

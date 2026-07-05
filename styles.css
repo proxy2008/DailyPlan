@@ -202,8 +202,17 @@ tr.pending td { color: #999; text-decoration: line-through; background: #fafafa;
 .pri-high { color: #e8a33d; font-weight: 600; font-size: 0.78em; }
 .pri-normal { color: #999; font-size: 0.78em; }
 .pri-low { color: #bbb; font-size: 0.78em; }
-.task-card-actions { display: flex; gap: 0.4em; }
+.task-card-actions { display: flex; gap: 0.4em; align-items: center; }
 .task-card-actions button { padding: 0.3em 0.6em; font-size: 0.82em; }
+.confirm-inline {
+    display: inline-flex;
+    gap: 0.3em;
+    align-items: center;
+    font-size: 0.8em;
+    color: var(--danger);
+    margin-left: 0.4em;
+}
+.confirm-inline button { padding: 0.2em 0.5em; font-size: 0.85em; }
 
 /* ===== 编辑器 ===== */
 .editor {
