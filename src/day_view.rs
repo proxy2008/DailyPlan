@@ -68,6 +68,7 @@ pub fn DayView(
                                 task_name: it.task_name.clone(),
                                 duration_min: it.duration_min,
                                 pending: pending_set.contains(&it.task_id),
+                                note: it.requirement.clone(),
                             }
                         }).collect();
                         on_print.with_value(|f| f(d, items));

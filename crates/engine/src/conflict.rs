@@ -57,6 +57,7 @@ mod tests {
             duration_min: 0,
             priority: PriorityLevel::Normal,
             pending: false,
+            requirement: String::new(),
         }
     }
 

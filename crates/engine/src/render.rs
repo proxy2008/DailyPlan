@@ -56,6 +56,8 @@ pub struct PrintItemInput {
     pub task_name: String,
     pub duration_min: u32,
     pub pending: bool,
+    #[serde(default)]
+    pub note: String,
 }
 
 /// 把 DayPlan + 选项转成可序列化的 PrintData。
@@ -127,7 +129,7 @@ pub fn to_print_data_from_items(
                 time: it.time.clone(),
                 task_name: it.task_name.clone(),
                 duration_min: it.duration_min,
-                note: String::new(),
+                note: it.note.clone(),
                 pending: it.pending,
             })
             .collect(),

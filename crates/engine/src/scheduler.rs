@@ -21,6 +21,7 @@ pub fn build_day_plan(date: NaiveDate, tasks: &[Task]) -> DayPlan {
         .iter()
         .filter(|t| t.active && t.frequency.matches(date))
         .flat_map(|t| {
+            let req = t.description.clone().unwrap_or_default();
             if t.slots.is_empty() {
                 // 无时段任务：产出单个 untimed item
                 vec![ChecklistItem {
@@ -31,6 +32,7 @@ pub fn build_day_plan(date: NaiveDate, tasks: &[Task]) -> DayPlan {
                     duration_min: 0,
                     priority: t.priority_level,
                     pending: false,
+                    requirement: req,
                 }]
             } else {
                 t.slots
@@ -43,6 +45,7 @@ pub fn build_day_plan(date: NaiveDate, tasks: &[Task]) -> DayPlan {
                         duration_min: slot.duration_minutes(),
                         priority: t.priority_level,
                         pending: false,
+                        requirement: req.clone(),
                     })
                     .collect::<Vec<_>>()
             }

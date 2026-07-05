@@ -21,6 +21,9 @@ pub struct ChecklistItem {
     /// 当日临时"待定"标记。后端始终 false，由前端改。
     #[serde(default)]
     pub pending: bool,
+    /// 任务的要求/执行标准（来自 Task.description），打印到备注列。
+    #[serde(default)]
+    pub requirement: String,
 }
 
 /// 两个事项发生时段重叠的告警。MVP 只告警，不自动改时段。

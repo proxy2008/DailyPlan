@@ -88,6 +88,7 @@ pub struct PrintItemInput {
     pub task_name: String,
     pub duration_min: u32,
     pub pending: bool,
+    pub note: String,
 }
 
 /// 打印某天（生成 PDF 并用系统查看器打开）。返回 PDF 路径。
