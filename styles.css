@@ -559,18 +559,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .toolbar-row {
   display: flex;
-  gap: 0.6em;
+  gap: 0.5em;
   align-items: center;
-  flex-wrap: wrap;
-  padding: 0.7em 0.9em;
+  flex-wrap: nowrap;
+  padding: 0.65em 0.8em;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
 }
 .toolbar-row .search-input {
-  flex: 1;
-  min-width: 200px;
+  flex: 0 0 220px;
+  min-width: 0;
+}
+/* 细分隔线：搜索 和 筛选组 之间 */
+.toolbar-divider {
+  width: 1px;
+  align-self: stretch;
+  background: var(--border);
+  margin: 0 0.2em;
+  flex-shrink: 0;
 }
 .filter-select {
   padding: 0.45em 0.7em;
@@ -581,6 +589,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   font-size: 0.85em;
   font-family: inherit;
   cursor: pointer;
+  flex: 0 0 auto;
 }
 .filter-select:focus { box-shadow: none; border-color: var(--primary); }
 .sort-dir-btn {
@@ -593,6 +602,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   cursor: pointer;
   min-width: 2.2em;
   justify-content: center;
+  flex: 0 0 auto;
 }
 .sort-dir-btn:hover { background: var(--hover-bg); }
 .count-badge {
@@ -602,6 +612,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   background: var(--hover-bg);
   padding: 0.25em 0.7em;
   border-radius: 10px;
+  flex: 0 0 auto;
 }
 
 /* 任务卡片 */
