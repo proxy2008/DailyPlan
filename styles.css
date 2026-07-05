@@ -581,7 +581,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   flex-shrink: 0;
 }
 .filter-select {
-  padding: 0.45em 0.7em;
+  width: auto;
+  padding: 0.45em 1.4em 0.45em 0.7em;
   border: 1px solid var(--border-strong);
   border-radius: var(--radius-sm);
   background: var(--input-bg);
