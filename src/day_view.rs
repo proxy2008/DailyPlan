@@ -28,6 +28,8 @@ pub fn DayView(
     let pending_ids = RwSignal::new(HashSet::<i64>::new());
     // 打印下拉菜单开关
     let print_menu_open = RwSignal::new(false);
+    // 菜单定位（fixed 坐标，避免被 overflow 容器裁剪）
+    let print_menu_pos = RwSignal::new((0i32, 0i32));
 
     // 触发单日打印：收集当前 plan + pending 标记
     let do_print_day = move || {
@@ -49,6 +51,18 @@ pub fn DayView(
             on_print.with_value(|f| f(d, items));
         }
         print_menu_open.set(false);
+    };
+
+    // 打开菜单：记录按钮的视口坐标，菜单用 fixed 定位到按钮下方
+    let open_print_menu = move |ev: leptos::ev::MouseEvent| {
+        use wasm_bindgen::JsCast;
+        // currentTarget 就是绑定 on:click 的按钮
+        if let Some(ct) = ev.current_target() {
+            let el: &web_sys::Element = ct.unchecked_ref();
+            let rect = el.get_bounding_client_rect();
+            print_menu_pos.set((rect.right() as i32, rect.bottom() as i32));
+            print_menu_open.set(true);
+        }
     };
 
     // date 或 tasks 变化时重新加载（增删改任务后自动刷新当天打卡表）
@@ -109,25 +123,7 @@ pub fn DayView(
                     <button on:click=move |_| today()>"今天"</button>
                     // 打印下拉菜单
                     <div class="print-dropdown">
-                        <button class="primary" on:click=move |_| print_menu_open.update(|o| *o = !*o)>"🖨 打印 ▾"</button>
-                        {move || if print_menu_open.get() {
-                            Some(view! {
-                                <div class="print-menu-overlay" on:click=move |_| print_menu_open.set(false)>
-                                    <div class="print-menu" on:click=move |ev| ev.stop_propagation()>
-                                        <button type="button" class="print-menu-item" on:click=move |_| do_print_day()>
-                                            "🖨 打印当天"
-                                        </button>
-                                        <button type="button" class="print-menu-item"
-                                            on:click=move |_| {
-                                                print_menu_open.set(false);
-                                                on_print_days.with_value(|f| f());
-                                            }>
-                                            "📅 打印多日…"
-                                        </button>
-                                    </div>
-                                </div>
-                            })
-                        } else { None }}
+                        <button class="primary" on:click=open_print_menu>"🖨 打印 ▾"</button>
                     </div>
                 </div>
             </div>
@@ -142,7 +138,40 @@ pub fn DayView(
                 Some(Ok(p)) => render_plan(&p, pending_ids),
             }}
         </div>
+
+        // 打印菜单浮层：fixed 定位，脱离 .page 的 overflow 容器
+        {move || if print_menu_open.get() {
+            let (right, top) = print_menu_pos.get();
+            Some(view! {
+                <div class="print-menu-overlay" on:click=move |_| print_menu_open.set(false)>
+                    <div class="print-menu"
+                        style:top=format!("{}px", top + 6)
+                        style:right=format!("{}px", window_width() - right)
+                        on:click=move |ev| ev.stop_propagation()>
+                        <button type="button" class="print-menu-item" on:click=move |_| do_print_day()>
+                            "🖨 打印当天"
+                        </button>
+                        <button type="button" class="print-menu-item"
+                            on:click=move |_| {
+                                print_menu_open.set(false);
+                                on_print_days.with_value(|f| f());
+                            }>
+                            "📅 打印多日…"
+                        </button>
+                    </div>
+                </div>
+            })
+        } else { None }}
     }.into_any()
+}
+
+/// 当前视口宽度（用于 fixed 定位菜单的 right 计算）。
+fn window_width() -> i32 {
+    web_sys::window()
+        .and_then(|w| w.inner_width().ok())
+        .and_then(|v| v.as_f64())
+        .map(|f| f as i32)
+        .unwrap_or(1280)
 }
 
 /// 把 DayPlan 渲染成视图（空态/冲突/卡片列表 + 待定区）。

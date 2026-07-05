@@ -326,9 +326,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   z-index: 900;
 }
 .print-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  right: 0;
+  position: fixed;
   background: var(--card-bg);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
