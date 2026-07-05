@@ -32,7 +32,7 @@ impl Page {
 }
 
 /// 渲染 SVG 图标（stroke 风格，跟随 currentColor）。
-fn Icon(path: &'static str) -> impl IntoView {
+fn icon(path: &'static str) -> impl IntoView {
     view! {
         <svg class="nav-icon" viewBox="0 0 24 24" fill="none"
             stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -66,7 +66,7 @@ pub fn Sidebar(page: RwSignal<Page>) -> impl IntoView {
                             class:active=is_active
                             on:click=move |_| page.set(p)
                         >
-                            {Icon(path)}
+                            {icon(path)}
                             <span class="nav-label">{label}</span>
                         </button>
                     }
