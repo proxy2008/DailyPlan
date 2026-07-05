@@ -569,8 +569,8 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   box-shadow: var(--shadow-sm);
 }
 .toolbar-row .search-input {
-  flex: 0 0 220px;
-  min-width: 0;
+  flex: 1 1 auto;
+  min-width: 160px;
 }
 /* 细分隔线：搜索 和 筛选组 之间 */
 .toolbar-divider {
