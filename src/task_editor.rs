@@ -193,14 +193,19 @@ pub fn TaskEditor(
     let on_cancel = StoredValue::new(on_cancel);
     // 日历选中的日期：提到组件顶层，只创建一次，避免在渲染闭包内重复创建导致 Effect 死循环。
     let dates_signal = RwSignal::new(state.get().custom_dates.clone());
+    // slots 独立信号：输入时只更新 slots_signal，不触发整个 state 重渲染（否则 DOM 重建导致输入法 panic）。
+    let slots_signal: RwSignal<Vec<(String, String)>> = RwSignal::new(state.get().slots.clone());
 
     let save = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
         if saving.get() {
             return;
         }
-        // 保存前把日历信号同步进 state
-        state.update(|s| s.custom_dates = dates_signal.get());
+        // 保存前把独立信号同步进 state
+        state.update(|s| {
+            s.custom_dates = dates_signal.get();
+            s.slots = slots_signal.get();
+        });
         let snap = state.get();
         let task = match snap.to_task() {
             Ok(t) => t,
@@ -304,40 +309,50 @@ pub fn TaskEditor(
 
             <label class="untimed-toggle">
                 <input type="checkbox" prop:checked=move || state.get().untimed
-                    on:change=move |ev| state.update(|s| {
-                        s.untimed = event_target_checked(&ev);
-                        if !s.untimed && s.slots.is_empty() {
-                            s.slots.push(("07:00".into(), "07:30".into()));
+                    on:change=move |ev| {
+                        let checked = event_target_checked(&ev);
+                        state.update(|s| s.untimed = checked);
+                        if !checked && slots_signal.get().is_empty() {
+                            slots_signal.update(|s| s.push(("07:00".into(), "07:30".into())));
                         }
-                    })/>
+                    }/>
                 "无固定时间（随时完成）"
             </label>
 
-            {move || (!state.get().untimed).then(|| view! {
-                <fieldset class="slots">
-                    <legend>"时间段（硬绑定）"</legend>
-                    {move || state.get().slots.iter().enumerate().map(|(i, _)| {
-                        let start_val = move || state.get().slots[i].0.clone();
-                        let end_val = move || state.get().slots[i].1.clone();
-                        view! {
-                            <div class="slot-row">
-                                <input type="time" prop:value=start_val
-                                    on:input=move |ev| state.update(|s| s.slots[i].0 = event_target_value(&ev)) />
-                                <span>"-"</span>
-                                <input type="time" prop:value=end_val
-                                    on:input=move |ev| state.update(|s| s.slots[i].1 = event_target_value(&ev)) />
-                                <button type="button"
-                                    on:click=move |_| state.update(|s| { if s.slots.len() > 1 { s.slots.remove(i); } })>
-                                    "✕"
-                                </button>
-                            </div>
-                        }
-                    }).collect::<Vec<_>>()}
-                    <button type="button" class="add-slot"
-                        on:click=move |_| state.update(|s| s.slots.push(("08:00".into(), "08:30".into())))>
-                        "+ 添加时段"
-                    </button>
-                </fieldset>
+            {move || (!state.get().untimed).then(|| {
+                // 渲染时段输入框——用 slots 的当前快照渲染一次，
+                // 输入只更新 slots_signal，不触发本闭包重跑（避免 DOM 重建导致输入法 panic）。
+                let snapshot = slots_signal.get();
+                let rows: Vec<_> = snapshot.iter().enumerate().map(|(i, (sv, ev))| {
+                    let ss = slots_signal;
+                    view! {
+                        <div class="slot-row" data-slot-index=i>
+                            <input type="time" value=sv.clone()
+                                on:input=move |ev| {
+                                    ss.update(|s| { if i < s.len() { s[i].0 = event_target_value(&ev); } });
+                                } />
+                            <span>"-"</span>
+                            <input type="time" value=ev.clone()
+                                on:input=move |ev| {
+                                    ss.update(|s| { if i < s.len() { s[i].1 = event_target_value(&ev); } });
+                                } />
+                            <button type="button"
+                                on:click=move |_| ss.update(|s| { if s.len() > 1 { s.remove(i); } })>
+                                "✕"
+                            </button>
+                        </div>
+                    }.into_any()
+                }).collect();
+                view! {
+                    <fieldset class="slots">
+                        <legend>"时间段（硬绑定）"</legend>
+                        {rows}
+                        <button type="button" class="add-slot"
+                            on:click=move |_| slots_signal.update(|s| s.push(("08:00".into(), "08:30".into())))>
+                            "+ 添加时段"
+                        </button>
+                    </fieldset>
+                }.into_any()
             })}
 
             <label>"优先级"
