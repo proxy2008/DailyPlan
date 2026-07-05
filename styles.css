@@ -17,12 +17,12 @@
   --primary-soft: #eef2f8;
   --primary-soft-text: #3d5a7a;
 
-  /* 语义色 */
-  --danger: #d93025;
-  --danger-soft: #fcecea;
-  --warn-bg: #fff4e5;
-  --warn-border: #e8a33d;
-  --warn-text: #b0651a;
+  /* 语义色（莫兰迪色系：低饱和、带灰调）*/
+  --danger: #b06a6a;
+  --danger-soft: #f0e3e3;
+  --warn-bg: #f5ece0;
+  --warn-border: #c89968;
+  --warn-text: #9a6a3a;
 
   /* 中性色阶 */
   --bg: #f5f6f7;
@@ -58,7 +58,7 @@
   --freq-text: var(--primary);
   --btn-hover-bg: var(--hover-bg);
   --btn-active-bg: #e8e8e8;
-  --danger-border: #f1c0bd;
+  --danger-border: #d4b8b8;
   --danger-hover-bg: var(--danger-soft);
   --muted-text: var(--text-3);
   --sidebar-active-bg: var(--primary-soft);
@@ -635,7 +635,7 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   margin-bottom: 0.3em;
 }
 .group-header.pri-urgent { color: var(--danger); }
-.group-header.pri-high { color: #d9883a; }
+.group-header.pri-high { color: #c08a5e; }
 .group-header.pri-normal { color: var(--text-3); }
 .group-header.pri-low { color: var(--text-4); }
 
@@ -698,12 +698,12 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   letter-spacing: 0.02em;
 }
 .pri-tag.pri-urgent { background: var(--danger-soft); color: var(--danger); }
-.pri-tag.pri-high { background: #fef3e2; color: #b06f1a; }
+.pri-tag.pri-high { background: #f0e8df; color: #9a6a3a; }
 .pri-tag.pri-normal { background: var(--hover-bg); color: var(--text-3); }
 .pri-tag.pri-low { background: var(--hover-bg); color: var(--text-4); }
 /* 兼容旧的 class（task_list.rs render_card 用 pri-urgent 等 span） */
 span.pri-urgent { color: var(--danger); font-weight: 600; font-size: 0.78em; }
-span.pri-high { color: #d9883a; font-weight: 600; font-size: 0.78em; }
+span.pri-high { color: #c08a5e; font-weight: 600; font-size: 0.78em; }
 span.pri-normal { color: var(--text-3); font-size: 0.78em; }
 span.pri-low { color: var(--text-4); font-size: 0.78em; }
 
@@ -895,10 +895,13 @@ fieldset legend {
     --shadow-md: 0 2px 8px rgba(0, 0, 0, 0.35);
     --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.5);
 
-    --danger-soft: #3d2825;
+    --danger: #c98a8a;
+    --danger-soft: #3d2a2a;
     --warn-bg: #3a2e1f;
+    --warn-border: #8a6a4a;
+    --warn-text: #c89968;
     --danger-border: #5a3a38;
-    --danger-hover-bg: #3d2825;
+    --danger-hover-bg: #3d2a2a;
     --btn-active-bg: #404040;
     --freq-text: #8ba8c4;
     --muted-text: #8a8a8a;
