@@ -79,7 +79,6 @@ pub fn TaskList(
                             let edit_state = EditorState::from_task(&t);
                             let edit_name = t.name.clone();
                             let delete_id = t.id;
-                            let delete_name = t.name.clone();
                             let freq_str = freq_label(&t.frequency);
                             let slots_str = t.slots.iter()
                                 .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
@@ -107,37 +106,35 @@ pub fn TaskList(
                                         <button on:click=move |_| on_edit.with_value(|f| f(edit_state.clone()))>
                                             "编辑"
                                         </button>
+                                        // 删除按钮：未确认时显示
                                         <button class="danger"
+                                            class:hidden=move || confirming.get() == Some(delete_id)
                                             on:click=move |_| {
                                                 confirming.set(Some(delete_id));
                                             }>"删除"</button>
-                                        {move || confirming.get().map(|id| if id == delete_id {
-                                            view! {
-                                                <span class="confirm-inline">
-                                                    "删除？"
-                                                    <button class="danger"
-                                                        on:click=move |_| {
-                                                            let id = delete_id;
-                                                            spawn_local(async move {
-                                                                match crate::tauri::delete_task(id).await {
-                                                                    Ok(()) => {
-                                                                        confirming.set(None);
-                                                                        on_refresh.with_value(|f| f());
-                                                                    }
-                                                                    Err(e) => {
-                                                                        web_sys::console::error_1(&format!("删除失败: {e}").into());
-                                                                        confirming.set(None);
-                                                                    }
-                                                                }
-                                                            });
-                                                        }>"是"</button>
-                                                    <button
-                                                        on:click=move |_| confirming.set(None)>"否"</button>
-                                                </span>
-                                            }.into_any()
-                                        } else {
-                                            view! { <span></span> }.into_any()
-                                        })}
+                                        // 确认按钮：点删除后显示
+                                        <span class="confirm-inline"
+                                            class:hidden=move || confirming.get() != Some(delete_id)>
+                                            "删除？"
+                                            <button class="danger"
+                                                on:click=move |_| {
+                                                    let id = delete_id;
+                                                    spawn_local(async move {
+                                                        match crate::tauri::delete_task(id).await {
+                                                            Ok(()) => {
+                                                                confirming.set(None);
+                                                                on_refresh.with_value(|f| f());
+                                                            }
+                                                            Err(e) => {
+                                                                web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                                confirming.set(None);
+                                                            }
+                                                        }
+                                                    });
+                                                }>"是"</button>
+                                            <button
+                                                on:click=move |_| confirming.set(None)>"否"</button>
+                                        </span>
                                     </div>
                                 </div>
                             }.into_any()

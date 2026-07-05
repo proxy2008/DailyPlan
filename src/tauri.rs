@@ -98,33 +98,6 @@ pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String,
     serde_wasm_bindgen::from_value::<String>(raw).map_err(|e| e.to_string())
 }
 
-// ===== 原生对话框（tauri-plugin-dialog）=====
-
-/// 原生 Yes/No 确认对话框。返回 true 表示用户点了「是」。
-/// 走 plugin:dialog|message 命令，buttons=YesNo，比较返回字符串 == "Yes"。
-pub async fn confirm_yes_no(message: &str, title: &str) -> Result<bool, String> {
-    #[derive(Serialize)]
-    struct Args<'a> {
-        message: &'a str,
-        title: Option<&'a str>,
-        kind: Option<&'a str>,
-        buttons: &'a str,
-    }
-    let args = serde_wasm_bindgen::to_value(&Args {
-        message,
-        title: Some(title),
-        kind: Some("warning"),
-        buttons: "YesNo",
-    })
-    .map_err(|e| e.to_string())?;
-    let raw = invoke("plugin:dialog|message", args).await;
-    // 调试：打印原始返回值，排查"确认后未删除"
-    web_sys::console::log_1(&format!("dialog raw return: {:?}", raw).into());
-    let result: String = serde_wasm_bindgen::from_value(raw).map_err(|e| e.to_string())?;
-    web_sys::console::log_1(&format!("dialog parsed: {:?}", result).into());
-    Ok(result == "Yes")
-}
-
 // 为前端编辑表单方便，重新导出 domain 类型
 #[allow(unused_imports)]
 pub use dailyplan_domain::{Frequency, TimeSlot};

@@ -213,6 +213,7 @@ tr.pending td { color: #999; text-decoration: line-through; background: #fafafa;
     margin-left: 0.4em;
 }
 .confirm-inline button { padding: 0.2em 0.5em; font-size: 0.85em; }
+.hidden { display: none !important; }
 
 /* ===== 编辑器 ===== */
 .editor {
