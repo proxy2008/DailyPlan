@@ -198,6 +198,10 @@ tr.pending td { color: #999; text-decoration: line-through; background: #fafafa;
 .task-freq { color: var(--primary); font-size: 0.82em; }
 .task-slots { color: #666; font-size: 0.82em; font-variant-numeric: tabular-nums; }
 .task-priority { color: #999; font-size: 0.78em; }
+.pri-urgent { color: #d93025; font-weight: 600; font-size: 0.78em; }
+.pri-high { color: #e8a33d; font-weight: 600; font-size: 0.78em; }
+.pri-normal { color: #999; font-size: 0.78em; }
+.pri-low { color: #bbb; font-size: 0.78em; }
 .task-card-actions { display: flex; gap: 0.4em; }
 .task-card-actions button { padding: 0.3em 0.6em; font-size: 0.82em; }
 

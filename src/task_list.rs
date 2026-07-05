@@ -33,6 +33,19 @@ fn freq_label(f: &Frequency) -> String {
         }
         Frequency::Interval { every_days, .. } => format!("每 {} 天", every_days),
         Frequency::Once { date } => format!("{} 单次", date.format("%Y-%m-%d")),
+        Frequency::Custom { dates } => {
+            if dates.is_empty() {
+                "从不".into()
+            } else if dates.len() == 1 {
+                format!("{} 当天", dates[0].format("%Y-%m-%d"))
+            } else {
+                format!(
+                    "指定 {} 天 ({} 起)",
+                    dates.len(),
+                    dates.first().unwrap().format("%Y-%m-%d")
+                )
+            }
+        }
     }
 }
 
@@ -70,19 +83,22 @@ pub fn TaskList(
                                 .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
                                 .collect::<Vec<_>>()
                                 .join("   ");
-                            let priority_str = if t.priority != 0 {
-                                format!("优先级 {}", t.priority)
-                            } else {
-                                String::new()
+                            let priority_label = t.priority_level.label_cn();
+                            let priority_class = match t.priority_level {
+                                dailyplan_domain::PriorityLevel::Urgent => "pri-urgent",
+                                dailyplan_domain::PriorityLevel::High => "pri-high",
+                                dailyplan_domain::PriorityLevel::Normal => "pri-normal",
+                                dailyplan_domain::PriorityLevel::Low => "pri-low",
                             };
+                            let show_priority = t.priority_level != dailyplan_domain::PriorityLevel::Normal;
                             view! {
                                 <div class="task-card">
                                     <div class="task-card-main">
                                         <span class="task-name">{edit_name}</span>
                                         <span class="task-freq">{freq_str}</span>
                                         <span class="task-slots">{slots_str}</span>
-                                        {move || (!priority_str.is_empty()).then(|| view! {
-                                            <span class="task-priority">{priority_str.clone()}</span>
+                                        {show_priority.then(|| view! {
+                                            <span class=priority_class>{format!("优先级:{}", priority_label)}</span>
                                         })}
                                     </div>
                                     <div class="task-card-actions">
