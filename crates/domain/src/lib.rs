@@ -7,4 +7,4 @@ pub mod checklist;
 pub mod task;
 
 pub use checklist::{ChecklistItem, Conflict, DayPlan};
-pub use task::{Frequency, Task, TimeSlot};
+pub use task::{Frequency, PriorityLevel, Task, TimeSlot};

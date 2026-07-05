@@ -22,6 +22,53 @@ impl TimeSlot {
     }
 }
 
+/// 任务优先级（4 档）。用于排序与显示。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PriorityLevel {
+    Urgent,
+    High,
+    Normal,
+    Low,
+}
+
+impl Default for PriorityLevel {
+    fn default() -> Self {
+        Self::Normal
+    }
+}
+
+impl PriorityLevel {
+    /// 数值越大越优先（用于排序）。
+    pub fn rank(&self) -> i32 {
+        match self {
+            Self::Urgent => 3,
+            Self::High => 2,
+            Self::Normal => 1,
+            Self::Low => 0,
+        }
+    }
+
+    /// 整数 rank 反解（越界值 clamp）。
+    pub fn from_rank(r: i32) -> Self {
+        match r {
+            r if r >= 3 => Self::Urgent,
+            2 => Self::High,
+            1 => Self::Normal,
+            _ => Self::Low,
+        }
+    }
+
+    pub fn label_cn(&self) -> &'static str {
+        match self {
+            Self::Urgent => "紧急",
+            Self::High => "重要",
+            Self::Normal => "一般",
+            Self::Low => "可选",
+        }
+    }
+}
+
 /// 任务出现的频率。MVP 支持四种；月度/日期范围/软调度留给二期。
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(tag = "kind", content = "params", rename_all = "snake_case")]
@@ -34,6 +81,8 @@ pub enum Frequency {
     Interval { every_days: u32, start: NaiveDate },
     /// 仅在某一天出现（一次性）。
     Once { date: NaiveDate },
+    /// 用户手动指定的若干日期（保持升序+去重）。
+    Custom { dates: Vec<NaiveDate> },
 }
 
 impl Default for Frequency {
@@ -60,12 +109,13 @@ impl Frequency {
                 elapsed % (*every_days as i64) == 0
             }
             Frequency::Once { date: d } => date == *d,
+            Frequency::Custom { dates } => dates.binary_search(&date).is_ok(),
         }
     }
 }
 
 /// 周一=0 .. 周日=6，与 `Frequency::Weekly` 的数组下标对齐。
-fn weekday_to_index(d: Weekday) -> usize {
+pub(crate) fn weekday_to_index(d: Weekday) -> usize {
     match d {
         Weekday::Mon => 0,
         Weekday::Tue => 1,
@@ -89,9 +139,9 @@ pub struct Task {
     /// 绑定的时间段（硬绑定）。Daily 频率下通常每个 slot 对应一次出现。
     #[serde(default)]
     pub slots: Vec<TimeSlot>,
-    /// 冲突时谁让位；数值越大优先级越高。
+    /// 冲突时谁让位；级别越高越优先。
     #[serde(default)]
-    pub priority: i32,
+    pub priority_level: PriorityLevel,
     #[serde(default = "default_active")]
     pub active: bool,
 }
@@ -108,7 +158,7 @@ impl Default for Task {
             description: None,
             frequency: Frequency::default(),
             slots: Vec::new(),
-            priority: 0,
+            priority_level: PriorityLevel::default(),
             active: true,
         }
     }
@@ -174,5 +224,39 @@ mod tests {
         };
         assert!(f.matches(NaiveDate::from_ymd_opt(2026, 7, 10).unwrap()));
         assert!(!f.matches(NaiveDate::from_ymd_opt(2026, 7, 11).unwrap()));
+    }
+
+    #[test]
+    fn custom_matches_chosen_dates() {
+        let f = Frequency::Custom {
+            dates: vec![
+                NaiveDate::from_ymd_opt(2026, 7, 5).unwrap(),
+                NaiveDate::from_ymd_opt(2026, 7, 8).unwrap(),
+                NaiveDate::from_ymd_opt(2026, 7, 12).unwrap(),
+            ],
+        };
+        assert!(f.matches(NaiveDate::from_ymd_opt(2026, 7, 5).unwrap()));
+        assert!(f.matches(NaiveDate::from_ymd_opt(2026, 7, 12).unwrap()));
+        assert!(!f.matches(NaiveDate::from_ymd_opt(2026, 7, 6).unwrap()));
+    }
+
+    #[test]
+    fn custom_empty_matches_nothing() {
+        let f = Frequency::Custom { dates: vec![] };
+        assert!(!f.matches(NaiveDate::from_ymd_opt(2026, 7, 5).unwrap()));
+    }
+
+    #[test]
+    fn priority_level_rank_roundtrip() {
+        for orig in [PriorityLevel::Urgent, PriorityLevel::High, PriorityLevel::Normal, PriorityLevel::Low] {
+            let back = PriorityLevel::from_rank(orig.rank());
+            assert_eq!(orig, back, "{:?} 往返不一致", orig);
+        }
+    }
+
+    #[test]
+    fn priority_level_from_rank_clamps() {
+        assert_eq!(PriorityLevel::from_rank(99), PriorityLevel::Urgent);
+        assert_eq!(PriorityLevel::from_rank(-5), PriorityLevel::Low);
     }
 }
