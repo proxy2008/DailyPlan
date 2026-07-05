@@ -257,6 +257,37 @@ fieldset legend { font-size: 0.85em; color: #555; padding: 0 0.4em; }
 }
 .editor-actions button { flex: 1; }
 
+/* ===== 日历 ===== */
+.calendar { font-size: 0.82em; }
+.calendar-nav {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 0.4em;
+}
+.calendar-nav span { font-weight: 600; }
+.calendar-nav button { padding: 0.2em 0.6em; }
+.calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+.calendar-cell {
+    text-align: center;
+    padding: 0.3em 0;
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    background: #fff;
+    font-size: 0.85em;
+    cursor: pointer;
+}
+.calendar-cell.header { font-weight: 600; background: #f7f8fa; cursor: default; }
+.calendar-cell.empty { border: none; background: transparent; cursor: default; }
+.calendar-cell.selected { background: var(--primary); color: #fff; border-color: var(--primary); }
+.calendar-summary {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-top: 0.4em; color: #666;
+}
+.calendar-summary button { font-size: 0.8em; padding: 0.2em 0.6em; }
+
 /* ===== 暗色模式 ===== */
 @media (prefers-color-scheme: dark) {
   :root {

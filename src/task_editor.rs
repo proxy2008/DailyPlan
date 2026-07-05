@@ -287,12 +287,19 @@ pub fn TaskEditor(
                                 on:input=move |ev| state.update(|s| s.once_date = event_target_value(&ev)) />
                         </label>
                     }.into_any()),
-                    "custom" => Some(view! {
-                        <div class="calendar-placeholder">
-                            <p>"日历组件将在下一步接入（任务 11）"</p>
-                            <p>"已选 " {move || state.get().custom_dates.len()} " 个日期"</p>
-                        </div>
-                    }.into_any()),
+                    "custom" => {
+                        let dates_signal = RwSignal::new(state.get().custom_dates.clone());
+                        // 双向同步：dates_signal 变 → state.custom_dates
+                        Effect::new(move || {
+                            let d = dates_signal.get();
+                            state.update(|s| s.custom_dates = d.clone());
+                        });
+                        Some(view! {
+                            <div>
+                                <crate::calendar::Calendar selected={dates_signal} />
+                            </div>
+                        }.into_any())
+                    }
                     _ => None,
                 }}
             </fieldset>

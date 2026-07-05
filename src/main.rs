@@ -1,4 +1,5 @@
 mod app;
+mod calendar;
 mod day_view;
 mod tauri;
 mod task_editor;
