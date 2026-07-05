@@ -14,6 +14,7 @@ pub fn run() {
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_shell::init())
+        .plugin(tauri_plugin_dialog::init())
         .setup(|app| {
             // DB 文件放 app_data_dir（macOS: ~/Library/Application Support/com.dailyplan.app/）
             let dir = app.path().app_data_dir()?;

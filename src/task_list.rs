@@ -107,11 +107,15 @@ pub fn TaskList(
                                         </button>
                                         <button class="danger"
                                             on:click=move |_| {
+                                                let name = delete_name.clone();
                                                 spawn_local(async move {
-                                                    if let Err(e) = crate::tauri::delete_task(delete_id).await {
-                                                        web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                    let msg = format!("确定删除任务「{}」吗？此操作不可撤销。", name);
+                                                    if crate::tauri::confirm_yes_no(&msg, "确认删除").await.unwrap_or(false) {
+                                                        if let Err(e) = crate::tauri::delete_task(delete_id).await {
+                                                            web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                        }
+                                                        on_refresh.with_value(|f| f());
                                                     }
-                                                    on_refresh.with_value(|f| f());
                                                 });
                                             }>"删除"</button>
                                     </div>
