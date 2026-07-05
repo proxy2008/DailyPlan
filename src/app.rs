@@ -199,10 +199,12 @@ pub fn App() -> impl IntoView {
                     }.into_any(),
                     Page::TaskManage => view! {
                         <section class="page-tasks">
-                            <div class="list-panel">
-                                <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                                <TaskManage tasks confirming tasks_rev />
-                            </div>
+                            <TaskManage
+                                tasks
+                                confirming
+                                tasks_rev
+                                on_create={move || start_create()}
+                            />
                         </section>
                     }.into_any(),
                 }}

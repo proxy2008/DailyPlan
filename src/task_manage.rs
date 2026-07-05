@@ -36,7 +36,9 @@ pub fn TaskManage(
     tasks: ReadSignal<Vec<Task>>,
     confirming: RwSignal<Option<i64>>,
     tasks_rev: RwSignal<u32>,
+    on_create: impl Fn() + Send + Sync + 'static,
 ) -> impl IntoView {
+    let start_create = StoredValue::new(on_create);
     // 工具条状态
     let search_kw = RwSignal::new(String::new());
     let freq_filter = RwSignal::new(None::<&'static str>); // None = 全部
@@ -93,9 +95,21 @@ pub fn TaskManage(
 
     view! {
         <div class="task-manage">
+            // 页面头部：标题 + 新建按钮
+            <div class="tasks-header">
+                <div>
+                    <h2>"任务管理"</h2>
+                    <div class="page-subtitle">{move || format!("共 {} 个任务", total.get())}</div>
+                </div>
+                <button class="primary new-task-btn"
+                    on:click=move |_| start_create.with_value(|f| f())>
+                    "+ 新建任务"
+                </button>
+            </div>
+
             // 工具条
             <div class="toolbar-row">
-                <input class="search-input" type="text" placeholder="搜索任务名或要求…"
+                <input class="search-input" type="text" placeholder="🔍  搜索任务名或要求…"
                     prop:value=move || search_kw.get()
                     on:input=move |ev| search_kw.set(event_target_value(&ev)) />
                 <select class="filter-select"
@@ -158,7 +172,7 @@ pub fn TaskManage(
                     {move || {
                         let t = total.get();
                         let f = filtered.get().len();
-                        if t == f { format!("共 {} 项", t) } else { format!("{}/{}", f, t) }
+                        if t == f { format!("共 {}", t) } else { format!("{}/{}", f, t) }
                     }}
                 </span>
             </div>
@@ -170,13 +184,23 @@ pub fn TaskManage(
                     if list.is_empty() {
                         let total_now = total.get();
                         return view! {
-                            <p class="empty">{
-                                if total_now == 0 {
-                                    "还没有任务，点击「新建任务」开始添加。".to_string()
-                                } else {
-                                    "没有匹配的任务，试试调整搜索或筛选条件。".to_string()
-                                }
-                            }</p>
+                            <div class="empty-state">
+                                <div class="empty-icon">{if total_now == 0 { "📋" } else { "🔍" }}</div>
+                                <div class="empty-title">{
+                                    if total_now == 0 {
+                                        "还没有任务".to_string()
+                                    } else {
+                                        "没有匹配的任务".to_string()
+                                    }
+                                }</div>
+                                <div class="empty-hint">{
+                                    if total_now == 0 {
+                                        "点击右上角「新建任务」开始添加".to_string()
+                                    } else {
+                                        "试试调整搜索关键字或筛选条件".to_string()
+                                    }
+                                }</div>
+                            </div>
                         }.into_any();
                     }
                     // 排序键 = 优先级 → 分组；否则平铺

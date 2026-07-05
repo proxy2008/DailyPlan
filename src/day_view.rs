@@ -5,7 +5,7 @@
 
 use std::collections::HashSet;
 
-use chrono::NaiveDate;
+use chrono::{Datelike, NaiveDate};
 use dailyplan_domain::DayPlan;
 use leptos::prelude::*;
 use leptos::task::spawn_local;
@@ -75,57 +75,88 @@ pub fn DayView(
 
     view! {
         <div class="day-view">
-            <div class="day-toolbar">
-                <button on:click=move |_| go(-1)>"‹ 前一天"</button>
-                <input type="date" prop:value=move || date.get()
-                    on:input=move |ev| date.set(event_target_value(&ev)) />
-                <button on:click=move |_| go(1)>"后一天 ›"</button>
-                <button on:click=move |_| today()>"今天"</button>
-                // 打印下拉菜单
-                <div class="print-dropdown">
-                    <button class="primary" on:click=move |_| print_menu_open.update(|o| *o = !*o)>"🖨 打印 ▾"</button>
-                    {move || if print_menu_open.get() {
-                        Some(view! {
-                            <div class="print-menu-overlay" on:click=move |_| print_menu_open.set(false)>
-                                <div class="print-menu" on:click=move |ev| ev.stop_propagation()>
-                                    <button type="button" class="print-menu-item" on:click=move |_| do_print_day()>
-                                        "🖨 打印当天"
-                                    </button>
-                                    <button type="button" class="print-menu-item"
-                                        on:click=move |_| {
-                                            print_menu_open.set(false);
-                                            on_print_days.with_value(|f| f());
-                                        }>
-                                        "📅 打印多日…"
-                                    </button>
-                                </div>
+            // 页面头部：日期标题 + 右侧导航/打印
+            <div class="schedule-header">
+                <div class="date-display">
+                    {move || {
+                        let d = date.get();
+                        let nd = NaiveDate::parse_from_str(&d, "%Y-%m-%d")
+                            .unwrap_or_else(|_| chrono::Local::now().date_naive());
+                        let weekday = match nd.weekday() {
+                            chrono::Weekday::Mon => "周一",
+                            chrono::Weekday::Tue => "周二",
+                            chrono::Weekday::Wed => "周三",
+                            chrono::Weekday::Thu => "周四",
+                            chrono::Weekday::Fri => "周五",
+                            chrono::Weekday::Sat => "周六",
+                            chrono::Weekday::Sun => "周日",
+                        };
+                        let is_today = nd == chrono::Local::now().date_naive();
+                        view! {
+                            <div class="date-main">{nd.format("%m 月 %d 日").to_string()} <span style="font-size:0.6em; font-weight:400; color:var(--text-3); margin-left:0.4em">{weekday}</span></div>
+                            <div class="date-sub">
+                                {if is_today { "今天".to_string() } else { nd.format("%Y-%m-%d").to_string() }}
+                                {" · 每日计划"}
                             </div>
-                        })
-                    } else { None }}
+                        }.into_any()
+                    }}
+                </div>
+                <div class="date-nav">
+                    <button class="icon-btn" title="前一天" on:click=move |_| go(-1)>"‹"</button>
+                    <input type="date" prop:value=move || date.get()
+                        on:input=move |ev| date.set(event_target_value(&ev)) />
+                    <button class="icon-btn" title="后一天" on:click=move |_| go(1)>"›"</button>
+                    <button on:click=move |_| today()>"今天"</button>
+                    // 打印下拉菜单
+                    <div class="print-dropdown">
+                        <button class="primary" on:click=move |_| print_menu_open.update(|o| *o = !*o)>"🖨 打印 ▾"</button>
+                        {move || if print_menu_open.get() {
+                            Some(view! {
+                                <div class="print-menu-overlay" on:click=move |_| print_menu_open.set(false)>
+                                    <div class="print-menu" on:click=move |ev| ev.stop_propagation()>
+                                        <button type="button" class="print-menu-item" on:click=move |_| do_print_day()>
+                                            "🖨 打印当天"
+                                        </button>
+                                        <button type="button" class="print-menu-item"
+                                            on:click=move |_| {
+                                                print_menu_open.set(false);
+                                                on_print_days.with_value(|f| f());
+                                            }>
+                                            "📅 打印多日…"
+                                        </button>
+                                    </div>
+                                </div>
+                            })
+                        } else { None }}
+                    </div>
                 </div>
             </div>
 
             {move || match plan.get() {
-                None => view! { <p>"生成中…"</p> }.into_any(),
-                Some(Err(e)) => view! { <p class="error">"加载失败: " {e}</p> }.into_any(),
+                None => view! {
+                    <div class="loading-state">"加载中…"</div>
+                }.into_any(),
+                Some(Err(e)) => view! {
+                    <div class="error-state">"加载失败：" {e}</div>
+                }.into_any(),
                 Some(Ok(p)) => render_plan(&p, pending_ids),
             }}
         </div>
     }.into_any()
 }
 
-/// 把 DayPlan 渲染成视图（空态/冲突/表格 + 待定区）。
+/// 把 DayPlan 渲染成视图（空态/冲突/卡片列表 + 待定区）。
 fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
     if p.items.is_empty() && p.conflicts.is_empty() {
         return view! {
-            <div class="day-plan">
-                <h3>{p.date.format("%Y-%m-%d").to_string()}</h3>
-                <p class="empty">"今日暂无计划任务"</p>
+            <div class="empty-state">
+                <div class="empty-icon">"🗒"</div>
+                <div class="empty-title">"今日暂无计划任务"</div>
+                <div class="empty-hint">"去「任务管理」添加任务，或切换其他日期查看"</div>
             </div>
         }.into_any();
     }
 
-    let date_str = p.date.format("%Y-%m-%d").to_string();
     let conflicts: Vec<String> = p.conflicts.iter().map(|c| c.message.clone()).collect();
     let items: Vec<(String, String, String, i64)> = p
         .items
@@ -133,12 +164,12 @@ fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
         .map(|it| {
             (
                 match (it.start, it.end) {
-                    (Some(s), Some(e)) => format!("{}-{}", s.format("%H:%M"), e.format("%H:%M")),
+                    (Some(s), Some(e)) => format!("{}–{}", s.format("%H:%M"), e.format("%H:%M")),
                     _ => String::new(),
                 },
                 it.task_name.clone(),
                 if it.duration_min > 0 {
-                    format!("{}min", it.duration_min)
+                    format!("{} 分", it.duration_min)
                 } else {
                     String::new()
                 },
@@ -150,8 +181,6 @@ fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
 
     view! {
         <div class="day-plan">
-            <h3>{date_str}</h3>
-
             {(!conflicts.is_empty()).then(|| {
                 let cs = conflicts.clone();
                 view! {
@@ -164,43 +193,37 @@ fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
                 }
             })}
 
-            <table class="checklist">
-                <thead>
-                    <tr>
-                        <th>"时间"</th>
-                        <th>"任务"</th>
-                        <th>"时长"</th>
-                        <th>"完成"</th>
-                        <th>"待定"</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {items.iter().map(|(time, name, dur, task_id)| {
-                        let task_id = *task_id;
-                        let is_pending = move || pending_ids.get().contains(&task_id);
-                        view! {
-                            <tr class:pending=is_pending>
-                                <td>{time.clone()}</td>
-                                <td>{name.clone()}</td>
-                                <td>{dur.clone()}</td>
-                                <td><input type="checkbox" /></td>
-                                <td>
-                                    <label class="pending-toggle">
-                                        <input type="checkbox" prop:checked=is_pending
-                                            on:change=move |ev| {
-                                                let checked = event_target_checked(&ev);
-                                                pending_ids.update(|s| {
-                                                    if checked { s.insert(task_id); } else { s.remove(&task_id); }
-                                                });
-                                            }/>
-                                        "待定"
-                                    </label>
-                                </td>
-                            </tr>
-                        }
-                    }).collect::<Vec<_>>()}
-                </tbody>
-            </table>
+            <div class="plan-list">
+                {items.iter().map(|(time, name, dur, task_id)| {
+                    let task_id = *task_id;
+                    let time_clone = time.clone();
+                    let name_clone = name.clone();
+                    let dur_clone = dur.clone();
+                    let is_pending = move || pending_ids.get().contains(&task_id);
+                    view! {
+                        <div class="plan-item" class:pending=is_pending>
+                            <div class="plan-time">
+                                {if time_clone.is_empty() { "随时".to_string() } else { time_clone.clone() }}
+                            </div>
+                            <div class="plan-name">{name_clone.clone()}</div>
+                            {(!dur_clone.is_empty()).then(|| view! { <div class="plan-dur">{dur_clone.clone()}</div> })}
+                            <div class="plan-check">
+                                <input type="checkbox" />
+                                <label class="pending-toggle">
+                                    <input type="checkbox" prop:checked=is_pending
+                                        on:change=move |ev| {
+                                            let checked = event_target_checked(&ev);
+                                            pending_ids.update(|s| {
+                                                if checked { s.insert(task_id); } else { s.remove(&task_id); }
+                                            });
+                                        }/>
+                                    "待定"
+                                </label>
+                            </div>
+                        </div>
+                    }
+                }).collect::<Vec<_>>()}
+            </div>
             <p class="item-count">"共 " {items_len} " 项"</p>
 
             {move || {
@@ -211,7 +234,7 @@ fn render_plan(p: &DayPlan, pending_ids: RwSignal<HashSet<i64>>) -> AnyView {
                     .collect();
                 view! {
                     <div class="pending-section">
-                        <h4>"待定"</h4>
+                        <h4>"待定事项"</h4>
                         <ul>
                             {pending_items.iter().map(|(_, name, dur, _)| {
                                 let suffix = if dur.is_empty() {
