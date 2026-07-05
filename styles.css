@@ -62,6 +62,30 @@ body { margin: 0; }
   .app-main { grid-template-columns: 1fr; }
 }
 
+/* ===== 编辑器浮层（modal） ===== */
+.modal-overlay {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 5vh;
+  z-index: 1000;
+  overflow-y: auto;
+}
+.modal-content {
+  background: var(--card-bg);
+  border-radius: 10px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  padding: 1.5em;
+  width: 90%;
+  max-width: 520px;
+  max-height: 88vh;
+  overflow-y: auto;
+  border: 1px solid var(--border);
+}
+
 .col {
   background: var(--card-bg);
   border: 1px solid var(--border);

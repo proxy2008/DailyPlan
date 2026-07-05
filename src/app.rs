@@ -141,26 +141,31 @@ pub fn App() -> impl IntoView {
             </section>
 
             <section class="col col-right">
-                {move || {
-                    if panel.get() == Panel::Editor {
-                        let state = editor_state.get();
-                        view! {
+                <div class="list-panel">
+                    <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
+                    <TaskList tasks confirming />
+                </div>
+            </section>
+        </main>
+
+        // 编辑器浮层（modal）：点新建/编辑时弹出，不改变底层布局
+        {move || {
+            if panel.get() == Panel::Editor {
+                let state = editor_state.get();
+                Some(view! {
+                    <div class="modal-overlay" on:click=move |_| on_cancel()>
+                        <div class="modal-content" on:click=move |ev| ev.stop_propagation()>
                             <TaskEditor
                                 initial={state}
                                 on_saved={on_saved}
                                 on_cancel={on_cancel}
                             />
-                        }.into_any()
-                    } else {
-                        view! {
-                            <div class="list-panel">
-                                <button class="primary block" on:click=move |_| start_create()>"+ 新建任务"</button>
-                                <TaskList tasks confirming />
-                            </div>
-                        }.into_any()
-                    }
-                }}
-            </section>
-        </main>
+                        </div>
+                    </div>
+                })
+            } else {
+                None
+            }
+        }}
     }.into_any()
 }
