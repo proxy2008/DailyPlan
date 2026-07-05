@@ -135,11 +135,6 @@ pub fn App() -> impl IntoView {
     };
 
     view! {
-        <header class="app-header">
-            <h1>"📅 每日计划表"</h1>
-            <p class="subtitle">"录入任务 · 绑定时段 · 生成打卡表 · 打印检查"</p>
-        </header>
-
         <main class="app-main">
             <section class="col col-left">
                 <DayView date tasks on_print={move |d: String, items: Vec<crate::tauri::PrintItemInput>| on_print(d, items)} />
