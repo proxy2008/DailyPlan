@@ -61,6 +61,7 @@ pub fn TaskList(tasks: ReadSignal<Vec<Task>>, confirming: RwSignal<Option<i64>>)
                         let slots = t.slots.iter()
                             .map(|s| format!("{}-{}", s.start.format("%H:%M"), s.end.format("%H:%M")))
                             .collect::<Vec<_>>().join("   ");
+                        let req = t.description.clone().unwrap_or_default();
                         let pl = t.priority_level.label_cn().to_string();
                         let pc = match t.priority_level {
                             dailyplan_domain::PriorityLevel::Urgent => "pri-urgent",
@@ -76,6 +77,7 @@ pub fn TaskList(tasks: ReadSignal<Vec<Task>>, confirming: RwSignal<Option<i64>>)
                                     <span class="task-freq">{freq}</span>
                                     <span class="task-slots">{slots}</span>
                                     {show_pri.then(|| view! { <span class=pc.clone()>{format!("优先级:{}", pl)}</span> })}
+                                    {(!req.is_empty()).then(|| view! { <span class="task-req">{format!("要求:{}", req)}</span> })}
                                 </div>
                                 <div class="task-card-actions">
                                     <button type="button" class="btn-task-action"

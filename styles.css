@@ -231,6 +231,7 @@ tr.pending td { color: #999; text-decoration: line-through; background: var(--pe
 .task-freq { color: var(--freq-text); font-size: 0.82em; }
 .task-slots { color: #666; font-size: 0.82em; font-variant-numeric: tabular-nums; }
 .task-priority { color: #999; font-size: 0.78em; }
+.task-req { color: var(--muted-text); font-size: 0.8em; font-style: italic; }
 .pri-urgent { color: #d93025; font-weight: 600; font-size: 0.78em; }
 .pri-high { color: #e8a33d; font-weight: 600; font-size: 0.78em; }
 .pri-normal { color: #999; font-size: 0.78em; }

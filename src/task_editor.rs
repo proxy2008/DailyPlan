@@ -235,7 +235,7 @@ pub fn TaskEditor(
                     on:input=move |ev| state.update(|s| s.name = event_target_value(&ev)) />
             </label>
 
-            <label>"描述（可选）"
+            <label>"要求（执行标准/注意事项）"
                 <input type="text" prop:value=move || state.get().description
                     on:input=move |ev| state.update(|s| s.description = event_target_value(&ev)) />
             </label>
