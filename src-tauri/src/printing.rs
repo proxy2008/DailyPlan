@@ -55,7 +55,14 @@ pub async fn print_day(
         .args([
             "compile",
             "--font-path",
-            "/System/Library/Fonts:/Library/Fonts:~/Library/Fonts",
+            // 跨平台字体目录：macOS / Windows / Linux
+            if cfg!(target_os = "macos") {
+                "/System/Library/Fonts:/Library/Fonts:~/Library/Fonts"
+            } else if cfg!(target_os = "windows") {
+                "C:\\Windows\\Fonts"
+            } else {
+                "/usr/share/fonts:/usr/local/share/fonts:~/.fonts"
+            },
             typ_path.to_str().unwrap(),
             pdf_path.to_str().unwrap(),
         ])

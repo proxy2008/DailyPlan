@@ -9,7 +9,7 @@
   margin: (top: 1.2cm, bottom: 1.0cm, left: 1.2cm, right: 1.2cm),
 )
 #set text(
-  font: ("PingFang SC", "Noto Sans CJK SC", "Source Han Sans SC", "Heiti SC"),
+  font: ("PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", "Source Han Sans SC", "Heiti SC"),
   size: 10pt,
   lang: "zh",
 )

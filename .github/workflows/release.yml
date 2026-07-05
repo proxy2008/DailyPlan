@@ -1,4 +1,4 @@
-# 打 tag 时自动构建 macOS .app + .dmg 并发布到 GitHub Release
+# 打 tag 时自动构建 macOS + Windows 并发布到 GitHub Release
 name: Release
 
 on:
@@ -7,8 +7,19 @@ on:
       - "v*"
 
 jobs:
-  release:
-    runs-on: macos-latest
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: macos-latest
+            target: aarch64-apple-darwin
+          - platform: macos-13
+            target: x86_64-apple-darwin
+          - platform: windows-latest
+            target: x86_64-pc-windows-msvc
+
+    runs-on: ${{ matrix.platform }}
     steps:
       - uses: actions/checkout@v4
 
@@ -20,6 +31,22 @@ jobs:
 
       - name: Install trunk
         run: cargo install trunk --locked
+
+      - name: Download Typst sidecar (Unix)
+        if: runner.os != 'Windows'
+        run: ./scripts/download-typst.sh
+
+      - name: Download Typst sidecar (Windows)
+        if: runner.os == 'Windows'
+        shell: bash
+        run: |
+          TYPST_VER="0.15.0"
+          TARGET="x86_64-pc-windows-msvc"
+          mkdir -p src-tauri/binaries
+          curl -sSL -o /tmp/typst.tar.xz "https://github.com/typst/typst/releases/download/v${TYPST_VER}/typst-${TARGET}.tar.xz"
+          tar xf /tmp/typst.tar.xz -C /tmp
+          cp "/tmp/typst-${TARGET}/typst.exe" "src-tauri/binaries/typst-${TARGET}.exe"
+          chmod +x "src-tauri/binaries/typst-${TARGET}.exe"
 
       - name: Build frontend
         run: trunk build
@@ -39,10 +66,13 @@ jobs:
             ### 下载
             - **Apple Silicon (M1/M2/M3)**: `DailyPlan_*_aarch64.dmg`
             - **Intel Mac**: `DailyPlan_*_x64.dmg`
+            - **Windows 11**: `DailyPlan_*_x64-setup.exe` 或 `DailyPlan_*_x64_en-US.msi`
 
             ### 安装
-            1. 下载对应架构的 .dmg
-            2. 打开，拖 DailyPlan 到 Applications
-            3. 首次启动右键 → 打开（绕过 Gatekeeper）
+            **macOS**: 下载 .dmg → 拖到 Applications → 右键打开（绕过 Gatekeeper）
+            **Windows**: 下载 .exe/.msi → 双击安装
+
+            ### 中文字体
+            macOS 使用系统 PingFang SC，Windows 使用系统微软雅黑，无需额外安装字体。
           releaseDraft: false
           prerelease: false

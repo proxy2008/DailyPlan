@@ -1,5 +1,22 @@
 # Changelog
 
+## v0.1.1 (2026-07-05)
+
+### 新增
+
+- **Windows 支持**：Win11 x64 构建（.exe / .msi 安装包）
+- **跨平台字体**：Typst 模板自动适配系统字体（macOS PingFang SC / Windows 微软雅黑 / Linux Noto）
+- **Typst sidecar 自动下载**：构建时按平台下载，不再提交大文件到仓库
+- GitHub Actions 同时构建 3 个 target（macOS arm64 / macOS x86_64 / Windows x64）
+
+### 变更
+
+- `.gitignore` 忽略 typst 二进制
+- printing.rs 字体路径改用 `cfg!(target_os)` 跨平台判断
+- 新增 `scripts/download-typst.sh` 本地开发下载脚本
+
+---
+
 ## v0.1.0 (2026-07-05)
 
 首个发布版本。

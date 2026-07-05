@@ -4,3 +4,6 @@
 /.dev-data/
 /.playwright-mcp/
 .DS_Store
+
+# Typst sidecar 二进制（构建时/脚本下载，不入仓库）
+/src-tauri/binaries/typst-*
