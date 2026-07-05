@@ -126,7 +126,12 @@ pub fn TaskList(
                                                                 on_refresh.with_value(|f| f());
                                                             }
                                                             Err(e) => {
+                                                                // 显示在界面上（alert 在 WKWebView 可能不行，
+                                                                // 用 document.title 临时存错误 + console 双管齐下）
                                                                 web_sys::console::error_1(&format!("删除失败: {e}").into());
+                                                                if let Some(doc) = web_sys::window().and_then(|w| w.document()) {
+                                                                    doc.set_title(&format!("❌删除失败: {e}"));
+                                                                }
                                                                 confirming.set(None);
                                                             }
                                                         }

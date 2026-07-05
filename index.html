@@ -6,6 +6,18 @@
     <link data-trunk rel="css" href="styles.css" />
     <link data-trunk rel="copy-dir" href="public" />
     <link data-trunk rel="rust" data-bin="dailyplan-ui" data-type="main" />
+    <script>
+      // 安全包装 Tauri invoke：catch reject 返回 {ok, val/err}，
+      // 避免 wasm-bindgen async extern 在后端报错时 panic。
+      window.safeInvoke = async function(cmd, args) {
+        try {
+          const val = await window.__TAURI__.core.invoke(cmd, args);
+          return { ok: true, val: val };
+        } catch (e) {
+          return { ok: false, err: String(e) };
+        }
+      };
+    </script>
   </head>
   <body></body>
 </html>

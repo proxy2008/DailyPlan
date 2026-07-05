@@ -1,7 +1,8 @@
 //! Tauri 命令调用封装。
 //!
-//! 通过全局 window.__TAURI__.core.invoke 调后端命令。
-//! 这是 Tauri 2 + wasm 的官方推荐模式（见 withGlobalTauri 配置）。
+//! 通过 window.safeInvoke（index.html 里定义）调 Tauri 后端命令。
+//! safeInvoke catch invoke 的 reject，返回 {ok, val} 或 {ok:false, err}，
+//! 避免 wasm-bindgen async extern 在后端报错时 panic。
 
 use dailyplan_domain::{DayPlan, Task};
 use serde::Serialize;
@@ -9,25 +10,37 @@ use wasm_bindgen::prelude::*;
 
 #[wasm_bindgen]
 extern "C" {
-    #[wasm_bindgen(js_namespace = ["window", "__TAURI__", "core"])]
-    async fn invoke(cmd: &str, args: JsValue) -> JsValue;
+    // index.html 里定义的 window.safeInvoke，catch reject 返回 {ok, val/err}。
+    #[wasm_bindgen(js_name = "safeInvoke")]
+    async fn safe_invoke(cmd: String, args: JsValue) -> JsValue;
+}
+
+/// 调后端命令，reject 时返回 Err(错误字符串) 而非 panic。
+async fn invoke_safe(cmd: &str, args: JsValue) -> Result<JsValue, String> {
+    let raw = safe_invoke(cmd.to_string(), args).await;
+    let ok = js_sys::Reflect::get(&raw, &"ok".into()).unwrap_or(JsValue::FALSE);
+    if ok.is_truthy() {
+        Ok(js_sys::Reflect::get(&raw, &"val".into()).unwrap_or(JsValue::UNDEFINED))
+    } else {
+        let err = js_sys::Reflect::get(&raw, &"err".into()).unwrap_or(JsValue::UNDEFINED);
+        Err(err.as_string().unwrap_or_else(|| "unknown error".into()))
+    }
 }
 
 /// 列出全部任务。
 pub async fn list_tasks() -> Result<Vec<Task>, String> {
-    let raw = invoke("list_tasks", JsValue::UNDEFINED).await;
+    let raw = invoke_safe("list_tasks", JsValue::UNDEFINED).await?;
     serde_wasm_bindgen::from_value::<Vec<Task>>(raw).map_err(|e| e.to_string())
 }
 
 /// 新建任务（返回带新 id 的副本）。
 pub async fn create_task(task: Task) -> Result<Task, String> {
-    // Tauri 命令按参数名取值：后端 fn create_task(task: Task) 要求 { task: {...} }。
     #[derive(Serialize)]
     struct Args {
         task: Task,
     }
     let args = serde_wasm_bindgen::to_value(&Args { task }).map_err(|e| e.to_string())?;
-    let raw = invoke("create_task", args).await;
+    let raw = invoke_safe("create_task", args).await?;
     serde_wasm_bindgen::from_value::<Task>(raw).map_err(|e| e.to_string())
 }
 
@@ -38,7 +51,7 @@ pub async fn update_task(task: Task) -> Result<(), String> {
         task: Task,
     }
     let args = serde_wasm_bindgen::to_value(&Args { task }).map_err(|e| e.to_string())?;
-    let _ = invoke("update_task", args).await;
+    invoke_safe("update_task", args).await?;
     Ok(())
 }
 
@@ -49,17 +62,8 @@ pub async fn delete_task(task_id: i64) -> Result<(), String> {
         task_id: i64,
     }
     let args = serde_wasm_bindgen::to_value(&Args { task_id }).map_err(|e| e.to_string())?;
-    let raw = invoke("delete_task", args).await;
-    // 后端返回 Result<(), String>；成功时 raw 是 null/undefined，失败时 invoke 会 reject。
-    // 尝试解析为字符串错误，解析失败视为成功。
-    if raw.is_null() || raw.is_undefined() {
-        Ok(())
-    } else {
-        match serde_wasm_bindgen::from_value::<String>(raw) {
-            Ok(e) => Err(e),
-            Err(_) => Ok(()),
-        }
-    }
+    invoke_safe("delete_task", args).await?;
+    Ok(())
 }
 
 /// 生成某天的打卡表。date 格式 YYYY-MM-DD。
@@ -69,7 +73,7 @@ pub async fn generate_day(date: &str) -> Result<DayPlan, String> {
         date: &'a str,
     }
     let args = serde_wasm_bindgen::to_value(&Args { date }).map_err(|e| e.to_string())?;
-    let raw = invoke("generate_day", args).await;
+    let raw = invoke_safe("generate_day", args).await?;
     serde_wasm_bindgen::from_value::<DayPlan>(raw).map_err(|e| e.to_string())
 }
 
@@ -84,9 +88,6 @@ pub struct PrintItemInput {
 }
 
 /// 打印某天（生成 PDF 并用系统查看器打开）。返回 PDF 路径。
-///
-/// 后端契约：`print_day(app, date: String, items: Vec<PrintItemInput>)`，
-/// 前端把已标记 pending 的 items 连同选定日期一起传入。
 pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String, String> {
     #[derive(Serialize)]
     struct Args<'a> {
@@ -94,7 +95,7 @@ pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String,
         items: Vec<PrintItemInput>,
     }
     let args = serde_wasm_bindgen::to_value(&Args { date, items }).map_err(|e| e.to_string())?;
-    let raw = invoke("print_day", args).await;
+    let raw = invoke_safe("print_day", args).await?;
     serde_wasm_bindgen::from_value::<String>(raw).map_err(|e| e.to_string())
 }
 
