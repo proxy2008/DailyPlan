@@ -191,12 +191,16 @@ pub fn TaskEditor(
     let error_msg = RwSignal::new(None::<String>);
     let on_saved = StoredValue::new(on_saved);
     let on_cancel = StoredValue::new(on_cancel);
+    // 日历选中的日期：提到组件顶层，只创建一次，避免在渲染闭包内重复创建导致 Effect 死循环。
+    let dates_signal = RwSignal::new(state.get().custom_dates.clone());
 
     let save = move |ev: leptos::ev::SubmitEvent| {
         ev.prevent_default();
         if saving.get() {
             return;
         }
+        // 保存前把日历信号同步进 state
+        state.update(|s| s.custom_dates = dates_signal.get());
         let snap = state.get();
         let task = match snap.to_task() {
             Ok(t) => t,
@@ -288,12 +292,6 @@ pub fn TaskEditor(
                         </label>
                     }.into_any()),
                     "custom" => {
-                        let dates_signal = RwSignal::new(state.get().custom_dates.clone());
-                        // 双向同步：dates_signal 变 → state.custom_dates
-                        Effect::new(move || {
-                            let d = dates_signal.get();
-                            state.update(|s| s.custom_dates = d.clone());
-                        });
                         Some(view! {
                             <div>
                                 <crate::calendar::Calendar selected={dates_signal} />
