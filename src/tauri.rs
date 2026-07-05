@@ -65,7 +65,7 @@ pub async fn generate_day(date: &str) -> Result<DayPlan, String> {
 }
 
 /// 前端传给 print_day 的单个 item（镜像后端 PrintItemInput）。
-/// Task 9 会接上 pending 状态；此处先以 false 占位。
+/// pending 由 DayView 的 pending_ids 信号填充。
 #[derive(Serialize, Clone)]
 pub struct PrintItemInput {
     pub time: Option<String>,
@@ -76,8 +76,8 @@ pub struct PrintItemInput {
 
 /// 打印某天（生成 PDF 并用系统查看器打开）。返回 PDF 路径。
 ///
-/// 后端签名（Task 6 后）：`print_day(app, date: String, items: Vec<PrintItemInput>)`，
-/// 前端必须同时传 date 与 items。
+/// 后端契约：`print_day(app, date: String, items: Vec<PrintItemInput>)`，
+/// 前端把已标记 pending 的 items 连同选定日期一起传入。
 pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String, String> {
     #[derive(Serialize)]
     struct Args<'a> {

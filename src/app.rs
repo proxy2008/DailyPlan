@@ -60,7 +60,7 @@ pub fn App() -> impl IntoView {
     };
 
     // 打印：调后端 print_day 生成 PDF 并打开。
-    // 后端签名（Task 6 后）需同时传 date + items。
+    // 把用户选定日期 + 已标记 pending 的 items 一起传入。
     let on_print = move |date_str: String, items: Vec<crate::tauri::PrintItemInput>| {
         spawn_local(async move {
             match crate::tauri::print_day(&date_str, items).await {
