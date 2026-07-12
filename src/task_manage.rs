@@ -114,6 +114,7 @@ pub fn TaskManage(
                     on:input=move |ev| search_kw.set(event_target_value(&ev)) />
                 <div class="toolbar-divider"></div>
                 <select class="filter-select"
+                    prop:value=move || freq_filter.get().unwrap_or("all")
                     on:change=move |ev| {
                         let v = event_target_value(&ev);
                         freq_filter.set(match v.as_str() {
@@ -133,6 +134,13 @@ pub fn TaskManage(
                     <option value="custom">"指定日期"</option>
                 </select>
                 <select class="filter-select"
+                    prop:value=move || match pri_filter.get() {
+                        Some(PriorityLevel::Urgent) => "urgent",
+                        Some(PriorityLevel::High) => "high",
+                        Some(PriorityLevel::Normal) => "normal",
+                        Some(PriorityLevel::Low) => "low",
+                        None => "all",
+                    }
                     on:change=move |ev| {
                         let v = event_target_value(&ev);
                         pri_filter.set(match v.as_str() {
@@ -150,6 +158,11 @@ pub fn TaskManage(
                     <option value="low">"可选"</option>
                 </select>
                 <select class="filter-select"
+                    prop:value=move || match sort_key.get() {
+                        SortKey::Name => "name",
+                        SortKey::Created => "created",
+                        SortKey::Priority => "priority",
+                    }
                     on:change=move |ev| {
                         let v = event_target_value(&ev);
                         sort_key.set(match v.as_str() {
@@ -168,6 +181,20 @@ pub fn TaskManage(
                         sort_dir.update(|d| *d = if *d == SortDir::Desc { SortDir::Asc } else { SortDir::Desc });
                     }>
                     {move || if sort_dir.get() == SortDir::Desc { "↓" } else { "↑" }}
+                </button>
+                // 一键清除筛选（搜索/频率/优先级），排序保留
+                <button class="clear-filter-btn" type="button" title="清除搜索和筛选条件"
+                    class:hidden=move || {
+                        search_kw.get().is_empty()
+                            && freq_filter.get().is_none()
+                            && pri_filter.get().is_none()
+                    }
+                    on:click=move |_| {
+                        search_kw.set(String::new());
+                        freq_filter.set(None);
+                        pri_filter.set(None);
+                    }>
+                    "✕"
                 </button>
                 <span class="count-badge">
                     {move || {

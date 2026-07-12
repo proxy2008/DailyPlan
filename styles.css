@@ -606,6 +606,21 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   flex: 0 0 auto;
 }
 .sort-dir-btn:hover { background: var(--hover-bg); }
+.clear-filter-btn {
+  padding: 0.45em 0.55em;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  background: var(--card-bg);
+  color: var(--text-3);
+  font-size: 0.85em;
+  cursor: pointer;
+  flex: 0 0 auto;
+}
+.clear-filter-btn:hover {
+  background: var(--danger-soft);
+  border-color: var(--danger-border);
+  color: var(--danger);
+}
 .count-badge {
   margin-left: auto;
   font-size: 0.8em;
