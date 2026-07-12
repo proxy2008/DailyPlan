@@ -47,9 +47,18 @@ pub fn Sidebar(page: RwSignal<Page>) -> impl IntoView {
     let pages = [Page::Schedule, Page::TaskManage];
     view! {
         <nav class="sidebar">
-            // 顶部：App 标识
+            // 顶部：App 标识（日历+勾图标，和应用图标统一）
             <div class="sidebar-brand">
-                <div class="brand-mark">"DP"</div>
+                <div class="brand-mark">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                        stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="3" y="4" width="18" height="18" rx="2" />
+                        <line x1="3" y1="9" x2="21" y2="9" />
+                        <line x1="8" y1="2" x2="8" y2="6" />
+                        <line x1="16" y1="2" x2="16" y2="6" />
+                        <path d="M9 14l2 2 4-4" />
+                    </svg>
+                </div>
                 <div class="brand-name">"DailyPlan"</div>
             </div>
 

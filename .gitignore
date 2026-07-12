@@ -4,7 +4,9 @@
 /.dev-data/
 /src-tauri/.dev-data/
 /.playwright-mcp/
+# 忽略散落的截图，但保留 icons 目录里的图标
 *.png
+!src-tauri/icons/*.png
 .DS_Store
 
 # Typst sidecar 二进制（构建时/脚本下载，不入仓库）

@@ -1,0 +1,32 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#5b7a9e"/>
+      <stop offset="100%" stop-color="#4a6885"/>
+    </linearGradient>
+    <filter id="shadow" x="-5%" y="-5%" width="110%" height="115%">
+      <feDropShadow dx="0" dy="6" stdDeviation="8" flood-color="#000000" flood-opacity="0.12"/>
+    </filter>
+  </defs>
+
+  <!-- 圆角方形背景（macOS 风格 squircle 近似）-->
+  <rect x="64" y="64" width="896" height="896" rx="210" ry="210" fill="url(#bg)"/>
+
+  <!-- 日历主体（白色卡片）-->
+  <rect x="200" y="260" width="624" height="560" rx="40" ry="40" fill="#ffffff" filter="url(#shadow)"/>
+
+  <!-- 日历顶部横条（莫兰迪蓝装饰条）-->
+  <path d="M 200 300 Q 200 260 240 260 L 784 260 Q 824 260 824 300 L 824 384 L 200 384 Z" fill="#5b7a9e"/>
+
+  <!-- 日历装订环（左右两个）-->
+  <rect x="350" y="200" width="28" height="130" rx="14" ry="14" fill="#3d5a7a"/>
+  <rect x="646" y="200" width="28" height="130" rx="14" ry="14" fill="#3d5a7a"/>
+
+  <!-- 勾选标记（莫兰迪绿，大号居中）-->
+  <path d="M 360 580 L 460 690 L 680 460"
+        fill="none"
+        stroke="#7fa88c"
+        stroke-width="72"
+        stroke-linecap="round"
+        stroke-linejoin="round"/>
+</svg>
