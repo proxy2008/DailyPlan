@@ -103,6 +103,21 @@ pub async fn print_day(date: &str, items: Vec<PrintItemInput>) -> Result<String,
     serde_wasm_bindgen::from_value::<String>(raw).map_err(|e| e.to_string())
 }
 
+/// 多日连续打印（从 startDate 起连续 days 天，合并到一个 PDF）。
+/// 注意：后端参数 start_date 经 Tauri 2 转成 camelCase startDate。
+pub async fn print_days(start_date: &str, days: u32) -> Result<String, String> {
+    #[derive(Serialize)]
+    struct Args<'a> {
+        #[serde(rename = "startDate")]
+        start_date: &'a str,
+        days: u32,
+    }
+    let args =
+        serde_wasm_bindgen::to_value(&Args { start_date, days }).map_err(|e| e.to_string())?;
+    let raw = invoke_safe("print_days", args).await?;
+    serde_wasm_bindgen::from_value::<String>(raw).map_err(|e| e.to_string())
+}
+
 // 为前端编辑表单方便，重新导出 domain 类型
 #[allow(unused_imports)]
 pub use dailyplan_domain::{Frequency, TimeSlot};
